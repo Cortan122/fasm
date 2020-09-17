@@ -1,0 +1,1491 @@
+<!DOCTYPE html><html><head>
+<meta http-equiv="content-type"
+context="text/html; charset=windows-1252">
+<title>Functions</title></head>
+<body bgcolor="#FFFFFF"><b>
+
+<style>
+body {
+ font-size: 18px;
+ font-weight: bold;
+ width: 720px;
+ font-family: "Consolas",
+ "Bitstream Vera Sans Mono",
+ "Courier New", "Courier",
+ "Andale Mono WT", "Andale Mono",
+ "Lucida Console", "DejaVu Sans Mono",
+ "Monaco", monospace;
+}
+
+.comment {
+ color: #A0A0A0;
+ font-style: italic;
+}
+
+.symbol { color: #2207FF; }
+.number { color: #5E00F7; }
+.string { color: #FF1777; }
+</style>
+
+<font color="#000000" size="5" face="Times New Roman">
+<p align="left"><u><i>
+Text Functions
+</i></u></p></font>
+
+<pre style="background:white; color:black;
+border:2px solid white; padding:.2em .2em;">
+<span class='comment'>; $$$$$$$$$$$$$$$$$$ MAGIC-ARM $$$$$$$$$$$$$$$$$$$</span>
+<span class='comment'>; *************** STAR^2 SOFTWARE ****************</span>
+<span class='comment'>; ?????????????????? TEXT.INC ????????????????????</span>
+
+<span class='comment'>; fast portable ARM text operations</span>
+
+<span class='comment'>; text.n t          ; get # characters (size-1)</span>
+<span class='comment'>; text.write a, b   ; copy with no 0 after</span>
+<span class='comment'>; text.copy a, b    ; standard copy with 0 after</span>
+<span class='comment'>; text.copy.n ...   ; copy with maximum size</span>
+<span class='comment'>; text.attach a, b  ; attach b to a; "concencate"</span>
+<span class='comment'>; text.attach.c...  ; attach character</span>
+<span class='comment'>; text.compare a, b ; compare. return <0></span>
+<span class='comment'>; text.find t, c    ; search for c. return &/0</span>
+<span class='comment'>; text.find.last... ; search for c reverse</span>
+<span class='comment'>; text.count.c t, c ; count occurrances of c</span>
+<span class='comment'>; text.count.n t    ; count # lines</span>
+<span class='comment'>; text.begins a, b  ; begins with b?</span>
+<span class='comment'>; text.ends a, b    ; ends with b?</span>
+<span class='comment'>; text.upper t      ; convert to uppercase</span>
+<span class='comment'>; text.lower t      ; convert to lowercase</span>
+<span class='comment'>; text.reverse t    ; reverse</span>
+<span class='comment'>; text.expand t, n  ; shift right</span>
+<span class='comment'>; text.prefix a, b  ; prepend</span>
+<span class='comment'>; text.enclose.c... ; enclose in 'c'</span>
+<span class='comment'>; text.align t...   ; align to size: '007F'</span>
+
+<span class='comment'>; text.array.equal ta, t, n</span>
+<span class='comment'>; text.array.begins ta, t, n</span>
+
+<span class='comment'>; text.skip.while t, type</span>
+<span class='comment'>; text.skip.until t, type</span>
+<span class='comment'>; text.copy.while a, b, type</span>
+<span class='comment'>; text.copy.until a, b, type</span>
+
+<span class='comment'>; set.source r</span>
+<span class='comment'>; set.token r</span>
+<span class='comment'>; set.stream s, t</span>
+
+<span class='comment'>; skip.while type</span>
+<span class='comment'>; skip.until type</span>
+<span class='comment'>; copy.while type</span>
+<span class='comment'>; copy.until type</span>
+
+<span class='comment'>; skip.space</span>
+<span class='comment'>; skip.white</span>
+<span class='comment'>; skip.comment</span>
+<span class='comment'>; skip.all</span>
+
+<span class='comment'>; i2t n, t         ; number/text conversions</span>
+<span class='comment'>; u2t n, t</span>
+<span class='comment'>; h2t n, t</span>
+<span class='comment'>; b2t n, t</span>
+
+<span class='comment'>; t2i t</span>
+<span class='comment'>; t2u t</span>
+<span class='comment'>; t2h t</span>
+<span class='comment'>; t2b t</span>
+
+<span class='comment'>;;;;;;;;;;;;;;; CHARACTER TABLES ;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; ILT - insensitive lookup table. A-Z/a-z are</span>
+<span class='comment'>; the same. increases processing speed by</span>
+<span class='comment'>; many times. example: if (tt[a]=tt[b]) instead</span>
+<span class='comment'>; of: if ((a>='a'&a<='z')&(b>='a'&b<='z')) |</span>
+<span class='comment'>; ((a>='A'&a<='Z')&(b>='Z'&b<='Z'))</span>
+
+<span class='comment'>; TLT - type lookup table. each byte contains</span>
+<span class='comment'>; C.X BITs to determine its type fast in one</span>
+<span class='comment'>; comparison: if tt[c]&SYMBOL</span>
+
+macro define.xlt <span class='symbol'>{</span>
+
+align <span class='number'>4</span>
+
+ILT db <span class='symbol'>\</span>
+ <span class='number'>00h</span>,<span class='number'>01h</span>,<span class='number'>02h</span>,<span class='number'>03h</span>,<span class='number'>04h</span>,<span class='number'>05h</span>,<span class='number'>06h</span>,<span class='number'>07h</span>,<span class='symbol'>\</span>
+ <span class='number'>08h</span>,<span class='number'>09h</span>,<span class='number'>0Ah</span>,<span class='number'>0Bh</span>,<span class='number'>0Ch</span>,<span class='number'>0Dh</span>,<span class='number'>0Eh</span>,<span class='number'>0Fh</span>,<span class='symbol'>\</span>
+ <span class='number'>10h</span>,<span class='number'>11h</span>,<span class='number'>12h</span>,<span class='number'>13h</span>,<span class='number'>14h</span>,<span class='number'>15h</span>,<span class='number'>16h</span>,<span class='number'>17h</span>,<span class='symbol'>\</span>
+ <span class='number'>18h</span>,<span class='number'>19h</span>,<span class='number'>1Ah</span>,<span class='number'>1Bh</span>,<span class='number'>1Ch</span>,<span class='number'>1Dh</span>,<span class='number'>1Eh</span>,<span class='number'>1Fh</span>,<span class='symbol'>\</span>
+ <span class='number'>20h</span>,<span class='number'>21h</span>,<span class='number'>22h</span>,<span class='number'>23h</span>,<span class='number'>24h</span>,<span class='number'>25h</span>,<span class='number'>26h</span>,<span class='number'>27h</span>,<span class='symbol'>\</span>
+ <span class='number'>28h</span>,<span class='number'>29h</span>,<span class='number'>2Ah</span>,<span class='number'>2Bh</span>,<span class='number'>2Ch</span>,<span class='number'>2Dh</span>,<span class='number'>2Eh</span>,<span class='number'>2Fh</span>,<span class='symbol'>\</span>
+ <span class='number'>30h</span>,<span class='number'>31h</span>,<span class='number'>32h</span>,<span class='number'>33h</span>,<span class='number'>34h</span>,<span class='number'>35h</span>,<span class='number'>36h</span>,<span class='number'>37h</span>,<span class='symbol'>\</span>
+ <span class='number'>38h</span>,<span class='number'>39h</span>,<span class='number'>3Ah</span>,<span class='number'>3Bh</span>,<span class='number'>3Ch</span>,<span class='number'>3Dh</span>,<span class='number'>3Eh</span>,<span class='number'>3Fh</span>,<span class='symbol'>\</span>
+ <span class='number'>40h</span>,<span class='number'>41h</span>,<span class='number'>42h</span>,<span class='number'>43h</span>,<span class='number'>44h</span>,<span class='number'>45h</span>,<span class='number'>46h</span>,<span class='number'>47h</span>,<span class='symbol'>\</span>
+ <span class='number'>48h</span>,<span class='number'>49h</span>,<span class='number'>4Ah</span>,<span class='number'>4Bh</span>,<span class='number'>4Ch</span>,<span class='number'>4Dh</span>,<span class='number'>4Eh</span>,<span class='number'>4Fh</span>,<span class='symbol'>\</span>
+ <span class='number'>50h</span>,<span class='number'>51h</span>,<span class='number'>52h</span>,<span class='number'>53h</span>,<span class='number'>54h</span>,<span class='number'>55h</span>,<span class='number'>56h</span>,<span class='number'>57h</span>,<span class='symbol'>\</span>
+ <span class='number'>58h</span>,<span class='number'>59h</span>,<span class='number'>5Ah</span>,<span class='number'>5Bh</span>,<span class='number'>5Ch</span>,<span class='number'>5Dh</span>,<span class='number'>5Eh</span>,<span class='number'>5Fh</span>,<span class='symbol'>\</span>
+ <span class='number'>60h</span>,<span class='number'>41h</span>,<span class='number'>42h</span>,<span class='number'>43h</span>,<span class='number'>44h</span>,<span class='number'>45h</span>,<span class='number'>46h</span>,<span class='number'>47h</span>,<span class='symbol'>\</span>
+ <span class='number'>48h</span>,<span class='number'>49h</span>,<span class='number'>4Ah</span>,<span class='number'>4Bh</span>,<span class='number'>4Ch</span>,<span class='number'>4Dh</span>,<span class='number'>4Eh</span>,<span class='number'>4Fh</span>,<span class='symbol'>\</span>
+ <span class='number'>50h</span>,<span class='number'>51h</span>,<span class='number'>52h</span>,<span class='number'>53h</span>,<span class='number'>54h</span>,<span class='number'>55h</span>,<span class='number'>56h</span>,<span class='number'>57h</span>,<span class='symbol'>\</span>
+ <span class='number'>58h</span>,<span class='number'>59h</span>,<span class='number'>5Ah</span>,<span class='number'>7Bh</span>,<span class='number'>7Ch</span>,<span class='number'>7Dh</span>,<span class='number'>7Eh</span>,<span class='number'>7Fh</span>
+
+TLT db <span class='symbol'>\</span>
+ <span class='number'>00h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='symbol'>\</span>
+ <span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>40h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>40h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='symbol'>\</span>
+ <span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='symbol'>\</span>
+ <span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='number'>80h</span>,<span class='symbol'>\</span>
+ <span class='number'>20h</span>,<span class='number'>10h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>10h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='symbol'>\</span>
+ <span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>10h</span>,<span class='number'>04h</span>,<span class='symbol'>\</span>
+ <span class='number'>01h</span>,<span class='number'>01h</span>,<span class='number'>01h</span>,<span class='number'>01h</span>,<span class='number'>01h</span>,<span class='number'>01h</span>,<span class='number'>01h</span>,<span class='number'>01h</span>,<span class='symbol'>\</span>
+ <span class='number'>01h</span>,<span class='number'>01h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>10h</span>,<span class='symbol'>\</span>
+ <span class='number'>10h</span>,<span class='number'>0Ah</span>,<span class='number'>0Ah</span>,<span class='number'>0Ah</span>,<span class='number'>0Ah</span>,<span class='number'>0Ah</span>,<span class='number'>0Ah</span>,<span class='number'>02h</span>,<span class='symbol'>\</span>
+ <span class='number'>0Ah</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>0Ah</span>,<span class='number'>02h</span>,<span class='number'>0Ah</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='symbol'>\</span>
+ <span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='symbol'>\</span>
+ <span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>10h</span>,<span class='symbol'>\</span>
+ <span class='number'>04h</span>,<span class='number'>0Ah</span>,<span class='number'>0Ah</span>,<span class='number'>0Ah</span>,<span class='number'>0Ah</span>,<span class='number'>0Ah</span>,<span class='number'>0Ah</span>,<span class='number'>02h</span>,<span class='symbol'>\</span>
+ <span class='number'>0Ah</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>0Ah</span>,<span class='number'>02h</span>,<span class='number'>0Ah</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='symbol'>\</span>
+ <span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='symbol'>\</span>
+ <span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>02h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>04h</span>,<span class='number'>80h</span>
+<span class='symbol'>}</span>
+
+define.xlt
+
+<span class='comment'>;            76543210b</span>
+C.NULL     <span class='symbol'>=</span> <span class='number'>00000000b</span> <span class='comment'>; 0</span>
+C.NUMBER   <span class='symbol'>=</span> <span class='number'>00000001b</span> <span class='comment'>; 0-9</span>
+C.ALPHA    <span class='symbol'>=</span> <span class='number'>00000010b</span> <span class='comment'>; A-Z, a-z</span>
+C.SYMBOL   <span class='symbol'>=</span> <span class='number'>00000100b</span> <span class='comment'>; all symbols except _.?!@$</span>
+C.NUMERIC  <span class='symbol'>=</span> <span class='number'>00001000b</span> <span class='comment'>; A-F/a-f, h,b,k,m/H,B,K,M</span>
+C.SYMBOLIC <span class='symbol'>=</span> <span class='number'>00010000b</span> <span class='comment'>; _.?!@$</span>
+C.SPACE    <span class='symbol'>=</span> <span class='number'>00100000b</span> <span class='comment'>; ' ', '/t'</span>
+C.RETURN   <span class='symbol'>=</span> <span class='number'>01000000b</span> <span class='comment'>; 0Dh, 0Ah</span>
+C.IGNORE   <span class='symbol'>=</span> <span class='number'>10000000b</span> <span class='comment'>; extended: 1.XXXXXXXb</span>
+C.KEYWORD  <span class='symbol'>=</span> <span class='number'>11111111b</span>
+
+C.DIGIT    <span class='symbol'>=</span> C.NUMBER or C.NUMERIC
+C.NAME     <span class='symbol'>=</span> C.ALPHA or C.NUMBER or C.SYMBOLIC
+C.SYMBOLS  <span class='symbol'>=</span> C.SYMBOL or C.SYMBOLIC
+C.ALPHAN   <span class='symbol'>=</span> C.ALPHA or C.NUMBER
+C.VISIBLE  <span class='symbol'>=</span> C.ALPHAN or C.SYMBOLS
+C.WHITE    <span class='symbol'>=</span> C.SPACE or C.RETURN
+C.BLANK    <span class='symbol'>=</span> C.WHITE or C.IGNORE
+C.END      <span class='symbol'>=</span> C.SYMBOL or C.WHITE
+C.0        <span class='symbol'>=</span> <span class='number'>0</span>
+
+<span class='comment'>; is c of type? a1=c, a2=type</span>
+
+function is.c<span class='symbol'>,</span> c<span class='symbol'>,</span> type
+  . a1<span class='symbol'>&</span><span class='number'>0FFh</span>, a3<span class='symbol'>=</span>TLT<span class='symbol'>,</span> a3<span class='symbol'>+</span>a1
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> a1<span class='symbol'>=</span><span class='symbol'>*</span>a3<span class='symbol'>,</span> a1<span class='symbol'>&</span>a2
+endf
+
+macro is.c c<span class='symbol'>,</span> t <span class='symbol'>{</span>
+  . a1<span class='symbol'>=</span>c<span class='symbol'>,</span> a2<span class='symbol'>=</span>t
+  is.c
+<span class='symbol'>}</span>
+
+macro if.is c<span class='symbol'>,</span> t <span class='symbol'>{</span>
+  is.c c<span class='symbol'>,</span> C.<span class='symbol'>#</span>t
+  .if true
+<span class='symbol'>}</span>
+
+numeric ZERO.C<span class='symbol'>=</span><span class='string'>'0'</span><span class='symbol'>,</span> SPACE.C<span class='symbol'>=</span><span class='string'>' '</span><span class='symbol'>,</span><span class='symbol'>\</span>
+ COMMA.C<span class='symbol'>=</span><span class='string'>','</span><span class='symbol'>,</span> COLIN.C<span class='symbol'>=</span><span class='string'>':'</span><span class='symbol'>,</span> SEMI.C<span class='symbol'>=</span><span class='string'>';'</span><span class='symbol'>,</span><span class='symbol'>\</span>
+ POUND.C<span class='symbol'>=</span><span class='string'>'#'</span><span class='symbol'>,</span> ASSIGN.C<span class='symbol'>=</span><span class='string'>'='</span><span class='symbol'>,</span> SLASHB.C<span class='symbol'>=</span><span class='string'>'\'</span>
+
+NL equ <span class='symbol'>,</span><span class='number'>0Dh</span>,<span class='number'>0Dh</span>,
+
+macro .if.text.equal a<span class='symbol'>,</span> b
+ <span class='symbol'>{</span> !if text.equal<span class='symbol'>,</span> a<span class='symbol'>,</span> b <span class='symbol'>}</span>
+macro .if.not.text.equal a<span class='symbol'>,</span> b
+ <span class='symbol'>{</span> !if.n text.equal<span class='symbol'>,</span> a<span class='symbol'>,</span> b <span class='symbol'>}</span>
+macro .if.text.find a<span class='symbol'>,</span> b
+ <span class='symbol'>{</span> !if text.find<span class='symbol'>,</span> a<span class='symbol'>,</span> b <span class='symbol'>}</span>
+macro .if.text.find.last a<span class='symbol'>,</span> b
+ <span class='symbol'>{</span> !if text.find.last<span class='symbol'>,</span> a<span class='symbol'>,</span> b <span class='symbol'>}</span>
+macro .if.text.begins a<span class='symbol'>,</span> b
+ <span class='symbol'>{</span> !if text.begins<span class='symbol'>,</span> a<span class='symbol'>,</span> b <span class='symbol'>}</span>
+macro .if.text.ends a<span class='symbol'>,</span> b
+ <span class='symbol'>{</span> !if text.ends<span class='symbol'>,</span> a<span class='symbol'>,</span> b <span class='symbol'>}</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; text.end(t) - advance a1 to end (*t=0)</span>
+
+function text.end<span class='symbol'>,</span> t
+  alias t<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>v1
+  . c<span class='symbol'>=</span><span class='number'>1</span>
+  .while c           <span class='comment'>; until 0</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span>    <span class='comment'>; read c</span>
+  .endw
+  . t<span class='symbol'>-</span><span class='symbol'>-</span>
+endf
+
+<span class='comment'>; text.n(t) - get text length, # characters</span>
+
+function text.n<span class='symbol'>,</span> t
+  alias t<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2<span class='symbol'>,</span> c<span class='symbol'>=</span>v1
+  . c<span class='symbol'>=</span><span class='number'>1</span>, b<span class='symbol'>=</span>t
+  .while c           <span class='comment'>; until 0</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span>    <span class='comment'>; read c</span>
+  .endw
+  . t<span class='symbol'>-</span><span class='symbol'>-</span><span class='symbol'>,</span> t<span class='symbol'>-</span>b         <span class='comment'>; return current-start</span>
+endf
+
+<span class='comment'>; text.write(a, b) - copy with no 0 after</span>
+
+function text.write<span class='symbol'>,</span> a<span class='symbol'>,</span> b
+  alias a<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2<span class='symbol'>,</span> c<span class='symbol'>=</span>v1
+  .forever
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>b<span class='symbol'>+</span><span class='symbol'>+</span>    <span class='comment'>; read</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>
+      return
+    .end
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>a<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c    <span class='comment'>; copy</span>
+  .endfv
+endf
+
+<span class='comment'>; text.copy(a, b) - standard copy with 0 after</span>
+
+function text.copy<span class='symbol'>,</span> a<span class='symbol'>,</span> b
+  alias a<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2<span class='symbol'>,</span> c<span class='symbol'>=</span>v1
+  . c<span class='symbol'>=</span><span class='number'>1</span>
+  .while c
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>b<span class='symbol'>+</span><span class='symbol'>+</span>    <span class='comment'>; read</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>a<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c    <span class='comment'>; copy</span>
+  .endw
+  . a<span class='symbol'>-</span><span class='symbol'>-</span>              <span class='comment'>; return end</span>
+endf
+
+<span class='comment'>; text.copy.n(a, b, n) - copy with maximum</span>
+<span class='comment'>; size specified</span>
+
+function text.copy.n<span class='symbol'>,</span> a<span class='symbol'>,</span> b<span class='symbol'>,</span> n
+  alias a<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   n<span class='symbol'>=</span>a3<span class='symbol'>,</span> c<span class='symbol'>=</span>v1
+  .repeat n          <span class='comment'>; # times</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>b<span class='symbol'>+</span><span class='symbol'>+</span>    <span class='comment'>; read</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>a<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c    <span class='comment'>; copy</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>          <span class='comment'>; end?</span>
+      .break
+    .end
+  .endr
+  . a<span class='symbol'>-</span><span class='symbol'>-</span>
+endf
+
+<span class='comment'>; text.attach(a, b) - attach b to a</span>
+
+function text.attach<span class='symbol'>,</span> a<span class='symbol'>,</span> b
+  alias a<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   b<span class='symbol'>=</span>a2<span class='symbol'>,</span> p<span class='symbol'>=</span>v1
+  . p<span class='symbol'>=</span>b
+  text.end
+  . b<span class='symbol'>=</span>p
+  text.copy
+endf
+
+<span class='comment'>; text.attach.c(t, c) - attach c to t</span>
+
+function text.attach.c<span class='symbol'>,</span> t<span class='symbol'>,</span> c
+  alias t<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>v2
+  . c<span class='symbol'>=</span>a2
+  text.end
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c<span class='symbol'>,</span> <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span><span class='number'>0</span>
+endf
+
+<span class='comment'>; text.compare(a, b) - lexical comparison.</span>
+<span class='comment'>; return <0></span>
+
+function text.compare<span class='symbol'>,</span> a<span class='symbol'>,</span> b
+  alias a<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v1<span class='symbol'>,</span> d<span class='symbol'>=</span>v2
+   . c<span class='symbol'>=</span><span class='number'>1</span>, d<span class='symbol'>=</span>c
+  .while c<span class='symbol'>=</span>d         <span class='comment'>; while equal</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>a<span class='symbol'>+</span><span class='symbol'>+</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> d<span class='symbol'>=</span><span class='symbol'>*</span>b<span class='symbol'>+</span><span class='symbol'>+</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>          <span class='comment'>; and both nonzero</span>
+      .break
+    .end
+    .if d<span class='symbol'>=</span><span class='number'>0</span>
+      .break
+    .end
+  .endw
+  . a<span class='symbol'>=</span>c<span class='symbol'>-</span>d            <span class='comment'>; return *a-*b</span>
+endf
+
+<span class='comment'>; text.equal(a, b) - equal? return 1/0</span>
+
+function text.equal<span class='symbol'>,</span> a<span class='symbol'>,</span> b
+  text.compare
+  .if false
+    return <span class='number'>1</span>
+  .end
+endf <span class='number'>0</span>
+
+<span class='comment'>; text.find(t, c) - search for character.</span>
+<span class='comment'>; return address or 0</span>
+
+function text.find<span class='symbol'>,</span> t<span class='symbol'>,</span> c
+  alias t<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v1<span class='symbol'>,</span> key<span class='symbol'>=</span>a2
+  .forever           <span class='comment'>; loop</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t      <span class='comment'>; read c</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>          <span class='comment'>; end?</span>
+      return <span class='number'>0</span>       <span class='comment'>; not found</span>
+    .end
+    .if c<span class='symbol'>=</span>key        <span class='comment'>; found?</span>
+      return t       <span class='comment'>; t=address</span>
+    .end
+    . t<span class='symbol'>+</span><span class='symbol'>+</span>            <span class='comment'>; next</span>
+  .endfv
+endf
+
+<span class='comment'>; text.find.last(t, c) - search for c reverse</span>
+
+function text.find.last<span class='symbol'>,</span> t<span class='symbol'>,</span> c
+  alias t<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   key<span class='symbol'>=</span>v1<span class='symbol'>,</span> p<span class='symbol'>=</span>v2
+  . key<span class='symbol'>=</span>c<span class='symbol'>,</span> p<span class='symbol'>=</span>t       <span class='comment'>; save begin</span>
+  . c<span class='symbol'>=</span><span class='number'>1</span>
+  .while c           <span class='comment'>; advance to end-1,</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span>    <span class='comment'>; last character</span>
+  .endw
+  . t<span class='symbol'>-</span><span class='number'>2</span>
+  .while t<span class='symbol'>></span>p         <span class='comment'>; loop backwards</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t      <span class='comment'>; until beginning</span>
+    .if c<span class='symbol'>=</span>key        <span class='comment'>; found</span>
+      return t       <span class='comment'>; t=address</span>
+    .end
+    . t<span class='symbol'>-</span><span class='symbol'>-</span>            <span class='comment'>; previous</span>
+  .endw
+endf <span class='number'>0</span>               <span class='comment'>; not found</span>
+
+<span class='comment'>; text.count.c(t, c) - count # of</span>
+<span class='comment'>; characters in text</span>
+
+function text.count.c<span class='symbol'>,</span> t<span class='symbol'>,</span> c
+  alias p<span class='symbol'>=</span>v1<span class='symbol'>,</span> c<span class='symbol'>=</span>v2<span class='symbol'>,</span> n<span class='symbol'>=</span>v3
+  . p<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>a2<span class='symbol'>,</span> n<span class='symbol'>=</span><span class='number'>0</span>
+  .while true
+    get p<span class='symbol'>=</span>text.find p<span class='symbol'>,</span> c
+    .if true
+      . p<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>,</span> n<span class='symbol'>+</span><span class='symbol'>+</span>
+    .end
+  .endw
+endf n
+
+<span class='comment'>; text.count.n(t) - count # lines</span>
+
+function text.count.n<span class='symbol'>,</span> t
+  text.count.c a1<span class='symbol'>,</span> <span class='number'>0Dh</span>
+  .if a1<span class='symbol'>></span><span class='number'>0</span>
+    . a1<span class='symbol'>+</span><span class='symbol'>+</span>
+  .end
+endf
+
+<span class='comment'>; text.begins(a, b) - a begins with b?</span>
+
+function text.begins<span class='symbol'>,</span> a<span class='symbol'>,</span> b
+  alias a<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v1<span class='symbol'>,</span> d<span class='symbol'>=</span>v2<span class='symbol'>,</span> e<span class='symbol'>=</span>v3
+  . c<span class='symbol'>=</span><span class='number'>1</span>, d<span class='symbol'>=</span>c
+  .while c<span class='symbol'>=</span>d         <span class='comment'>; while equal</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>a<span class='symbol'>+</span><span class='symbol'>+</span>    <span class='comment'>; load *a/*b</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> d<span class='symbol'>=</span><span class='symbol'>*</span>b<span class='symbol'>+</span><span class='symbol'>+</span>
+    . e<span class='symbol'>=</span>c<span class='symbol'>|</span>d          <span class='comment'>; and both nonzero</span>
+    .breakz          <span class='comment'>; break if either=0</span>
+  .endw
+  .if d<span class='symbol'><</span><span class='symbol'>></span><span class='number'>0</span>           <span class='comment'>; *b must=0</span>
+    return <span class='number'>0</span>
+  .end
+endf
+
+<span class='comment'>; text.ends(a, b) - a ends with b?</span>
+
+function text.ends<span class='symbol'>,</span> a<span class='symbol'>,</span> b
+  alias <span class='symbol'>\</span>
+   a<span class='symbol'>=</span>v1<span class='symbol'>,</span> b<span class='symbol'>=</span>v2<span class='symbol'>,</span> p<span class='symbol'>=</span>v3
+  . a<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2
+  text.end            <span class='comment'>; a=end(a)-length(b)</span>
+  . p<span class='symbol'>=</span>a1<span class='symbol'>,</span> a1<span class='symbol'>=</span>b
+  text.n
+  . p<span class='symbol'>-</span>a1<span class='symbol'>,</span> a1<span class='symbol'>=</span>p<span class='symbol'>,</span> a2<span class='symbol'>=</span>b
+  text.compare
+  .if false
+    return <span class='number'>1</span>
+  .end
+endf <span class='number'>0</span>
+
+<span class='comment'>; text.upper(t) - convert to uppercase</span>
+
+function text.upper<span class='symbol'>,</span> t
+  alias t<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>v1
+  .forever
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t      <span class='comment'>; get c</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>          <span class='comment'>; end?</span>
+      return t
+    .end
+    .if c<span class='symbol'>></span><span class='symbol'>=</span><span class='number'>97</span>        <span class='comment'>; lowercase?</span>
+      .if c<span class='symbol'><</span><span class='symbol'>=</span><span class='number'>122</span>
+        . c<span class='symbol'>-</span><span class='number'>32</span>
+        . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span>c  <span class='comment'>; copy c</span>
+      .end
+    .end
+    . t<span class='symbol'>+</span><span class='symbol'>+</span>            <span class='comment'>; next c</span>
+  .endfv
+endf
+
+<span class='comment'>; text.lower(t) - convert to lowercase</span>
+
+function text.lower<span class='symbol'>,</span> t
+  alias t<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>v1
+  .forever
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t      <span class='comment'>; get c</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>          <span class='comment'>; end?</span>
+      return
+    .end
+    .if c<span class='symbol'>></span><span class='symbol'>=</span><span class='number'>65</span>        <span class='comment'>; uppercase?</span>
+      .if c<span class='symbol'><</span><span class='symbol'>=</span><span class='number'>90</span>
+        . c<span class='symbol'>+</span><span class='number'>32</span>
+        . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span>c  <span class='comment'>; copy c</span>
+      .end
+    .end
+    . t<span class='symbol'>+</span><span class='symbol'>+</span>            <span class='comment'>; next c</span>
+  .endfv
+endf
+
+<span class='comment'>; text.reverse(t) - reverse text</span>
+
+function text.reverse<span class='symbol'>,</span> t
+  alias t<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   p<span class='symbol'>=</span>a2<span class='symbol'>,</span> s<span class='symbol'>=</span>a3<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v1<span class='symbol'>,</span> d<span class='symbol'>=</span>v2
+  . s<span class='symbol'>=</span>t<span class='symbol'>,</span> c<span class='symbol'>=</span><span class='number'>1</span>         <span class='comment'>; save start</span>
+  .while c
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span>    <span class='comment'>; advance to end</span>
+  .endw
+  . p<span class='symbol'>=</span>t<span class='symbol'>-</span><span class='number'>2</span>, t<span class='symbol'>=</span>s
+  .while t<span class='symbol'><</span>p         <span class='comment'>; exchange *t++/*p--</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> d<span class='symbol'>=</span><span class='symbol'>*</span>p
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>d
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>p<span class='symbol'>=</span>c
+    . p<span class='symbol'>-</span><span class='symbol'>-</span>
+  .endw
+  . t<span class='symbol'>-</span><span class='symbol'>-</span>
+endf
+
+<span class='comment'>; expand; shift all characters right.</span>
+<span class='comment'>; example: 'abc123' becomes 'XXXabc123'</span>
+<span class='comment'>; after expand 3 where X is unknown</span>
+
+function text.expand<span class='symbol'>,</span> t<span class='symbol'>,</span> n
+  alias t<span class='symbol'>=</span>v1<span class='symbol'>,</span> p<span class='symbol'>=</span>v2<span class='symbol'>,</span><span class='symbol'>\</span>
+   n<span class='symbol'>=</span>v3<span class='symbol'>,</span> tn<span class='symbol'>=</span>v4<span class='symbol'>,</span> a<span class='symbol'>=</span>v5<span class='symbol'>,</span> b<span class='symbol'>=</span>v6
+  . t<span class='symbol'>=</span>a1<span class='symbol'>,</span> n<span class='symbol'>=</span>a2
+  get tn<span class='symbol'>=</span>text.n t
+  . a<span class='symbol'>=</span>t<span class='symbol'>+</span>tn<span class='symbol'>,</span> a<span class='symbol'>-</span><span class='symbol'>-</span><span class='symbol'>,</span> b<span class='symbol'>=</span>a<span class='symbol'>,</span> a<span class='symbol'>+</span>n
+  .repeat tn
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>a<span class='symbol'>=</span><span class='symbol'>*</span>b<span class='symbol'>,</span> a<span class='symbol'>-</span><span class='symbol'>-</span><span class='symbol'>,</span> b<span class='symbol'>-</span><span class='symbol'>-</span>
+  .endr
+endf
+
+<span class='comment'>; insert text at beginning</span>
+
+function text.prefix<span class='symbol'>,</span> a<span class='symbol'>,</span> b
+  alias a<span class='symbol'>=</span>v1<span class='symbol'>,</span> b<span class='symbol'>=</span>v2<span class='symbol'>,</span> n<span class='symbol'>=</span>v3
+  . a<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2
+  get n<span class='symbol'>=</span>text.n b
+  text.expand a<span class='symbol'>,</span> n
+  text.write a<span class='symbol'>,</span> b
+endf
+
+<span class='comment'>; enclose t in b/egin and e/nd characters.</span>
+<span class='comment'>; example: text.enclose t, 28h, 29h</span>
+<span class='comment'>; '(', ')'</span>
+
+function text.enclose.c<span class='symbol'>,</span> t<span class='symbol'>,</span> b<span class='symbol'>,</span> e
+  alias t<span class='symbol'>=</span>v1<span class='symbol'>,</span> b<span class='symbol'>=</span>v2<span class='symbol'>,</span> e<span class='symbol'>=</span>v3<span class='symbol'>,</span><span class='symbol'>\</span>
+   p<span class='symbol'>=</span>v4<span class='symbol'>,</span> n<span class='symbol'>=</span>v5<span class='symbol'>,</span> c<span class='symbol'>=</span>v6
+  . t<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2<span class='symbol'>,</span> e<span class='symbol'>=</span>a3
+  get n<span class='symbol'>=</span>text.n t
+  text.expand t<span class='symbol'>,</span> <span class='number'>1</span>
+  . p<span class='symbol'>=</span>t<span class='symbol'>,</span> <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>p<span class='symbol'>=</span>b<span class='symbol'>,</span> p<span class='symbol'>=</span>t<span class='symbol'>+</span>n<span class='symbol'>,</span> p<span class='symbol'>+</span><span class='symbol'>+</span>
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>p<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>e<span class='symbol'>,</span> <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>p<span class='symbol'>=</span><span class='number'>0</span>
+endf
+
+<span class='comment'>; another way:</span>
+
+<span class='comment'>; text.copy buffer, b</span>
+<span class='comment'>; text.attach buffer, a</span>
+<span class='comment'>; text.copy a, buffer</span>
+
+<span class='comment'>; prefix text with c's ('0', ' ', etc)</span>
+<span class='comment'>; or ensure maximum n. example:</span>
+<span class='comment'>; before: text t='7FAB'</span>
+<span class='comment'>; text.align t, 30h, 8</span>
+<span class='comment'>; after: t='00007FAB', aligned to hex32</span>
+
+function text.align<span class='symbol'>,</span> t<span class='symbol'>,</span> c<span class='symbol'>,</span> n
+  alias t<span class='symbol'>=</span>v1<span class='symbol'>,</span> c<span class='symbol'>=</span>v2<span class='symbol'>,</span><span class='symbol'>\</span>
+   n<span class='symbol'>=</span>v4<span class='symbol'>,</span> p<span class='symbol'>=</span>v5<span class='symbol'>,</span> tn<span class='symbol'>=</span>v6
+  . t<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>a2<span class='symbol'>,</span> n<span class='symbol'>=</span>a3
+  get tn<span class='symbol'>=</span>text.n t
+  .if n<span class='symbol'>=</span>tn            <span class='comment'>; same size</span>
+    return            <span class='comment'>; do nothing</span>
+  .end
+  .if tn<span class='symbol'>></span>n            <span class='comment'>; exceeds maximum</span>
+    . t<span class='symbol'>+</span>n<span class='symbol'>,</span> <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span><span class='number'>0</span>  <span class='comment'>; end at t+n</span>
+    return
+  .end
+  . n<span class='symbol'>-</span>tn              <span class='comment'>; expand t</span>
+  text.expand t<span class='symbol'>,</span> n
+  .repeat n
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c
+  .endr
+  . t<span class='symbol'>+</span>tn<span class='symbol'>,</span> <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span><span class='number'>0</span>   <span class='comment'>; terminate</span>
+endf
+
+<span class='comment'>; search text array ta for t using text.equal.</span>
+<span class='comment'>; return index or -1 (<0) if not found. ta is</span>
+<span class='comment'>; an array of text addresses (texts)</span>
+
+function text.array.equal<span class='symbol'>,</span> ta<span class='symbol'>,</span> t<span class='symbol'>,</span> n
+  alias ta<span class='symbol'>=</span>v1<span class='symbol'>,</span> t<span class='symbol'>=</span>v2<span class='symbol'>,</span><span class='symbol'>\</span>
+   n<span class='symbol'>=</span>v3<span class='symbol'>,</span> i<span class='symbol'>=</span>v4<span class='symbol'>,</span> p<span class='symbol'>=</span>v5
+  . ta<span class='symbol'>=</span>a1<span class='symbol'>,</span> t<span class='symbol'>=</span>a2<span class='symbol'>,</span> n<span class='symbol'>=</span>a3
+  .loop i<span class='symbol'>=</span><span class='number'>0</span> to n
+    . p<span class='symbol'>=</span>ta<span class='symbol'>[</span>i<span class='symbol'>]</span>
+    .if.text.equal t<span class='symbol'>,</span> p <span class='comment'>; p, t</span>
+      return i
+    .end
+  .endl
+endf <span class='symbol'>-</span><span class='number'>1</span>
+
+macro .if.text.array.equal ta<span class='symbol'>,</span> t <span class='symbol'>{</span>
+  text.array.equal ta<span class='symbol'>,</span> t<span class='symbol'>,</span> ta<span class='symbol'>#</span>.$
+  .if r0<span class='symbol'><</span><span class='symbol'>></span><span class='symbol'>-</span><span class='number'>1</span>
+<span class='symbol'>}</span>
+
+function text.array.begins<span class='symbol'>,</span> ta<span class='symbol'>,</span> t<span class='symbol'>,</span> n
+  alias ta<span class='symbol'>=</span>v1<span class='symbol'>,</span> t<span class='symbol'>=</span>v2<span class='symbol'>,</span><span class='symbol'>\</span>
+   n<span class='symbol'>=</span>v3<span class='symbol'>,</span> i<span class='symbol'>=</span>v4<span class='symbol'>,</span> p<span class='symbol'>=</span>v5
+  . ta<span class='symbol'>=</span>a1<span class='symbol'>,</span> t<span class='symbol'>=</span>a2<span class='symbol'>,</span> n<span class='symbol'>=</span>a3
+  .loop i<span class='symbol'>=</span><span class='number'>0</span> to n
+    . p<span class='symbol'>=</span>ta<span class='symbol'>[</span>i<span class='symbol'>]</span>
+    .if.text.begins p<span class='symbol'>,</span> t
+      return i
+    .end
+  .endl
+endf <span class='symbol'>-</span><span class='number'>1</span>
+
+macro .if.text.array.begins ta<span class='symbol'>,</span> t <span class='symbol'>{</span>
+  text.array.begins ta<span class='symbol'>,</span> t<span class='symbol'>,</span> ta<span class='symbol'>#</span>.$
+  .if r0<span class='symbol'><</span><span class='symbol'>></span><span class='symbol'>-</span><span class='number'>1</span>
+<span class='symbol'>}</span>
+
+<span class='comment'>; 2-DO: insensitive compare and search</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;;; CONVERSIONS ;;;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; x2t(n, t) ; number to text</span>
+
+<span class='comment'>; convert unsigned 32BIT integer to text</span>
+
+function u2t<span class='symbol'>,</span> n<span class='symbol'>,</span> t
+  alias n<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   x<span class='symbol'>=</span>a2<span class='symbol'>,</span> y<span class='symbol'>=</span>a3<span class='symbol'>,</span><span class='symbol'>\</span>
+   t<span class='symbol'>=</span>v1<span class='symbol'>,</span> s<span class='symbol'>=</span>v2<span class='symbol'>,</span> c<span class='symbol'>=</span>v3
+  . t<span class='symbol'>=</span>a2<span class='symbol'>,</span> s<span class='symbol'>=</span>a2
+  .if n<span class='symbol'>=</span><span class='number'>0</span>             <span class='comment'>; zero?</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span><span class='number'>30h</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span><span class='number'>0</span>
+    return t
+  .end
+  .while n            <span class='comment'>; until 0</span>
+    . y<span class='symbol'>=</span>n             <span class='comment'>; dividend</span>
+    . x<span class='symbol'>=</span><span class='number'>1999999Ah</span>     <span class='comment'>; ((2^32)/10)+1</span>
+    . n<span class='symbol'>=</span>n<span class='symbol'>-</span><span class='symbol'>(</span>n<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>30</span>)    <span class='comment'>; n=n-(n>>>30)</span>
+    umull c<span class='symbol'>,</span> n<span class='symbol'>,</span> n<span class='symbol'>,</span> x  <span class='comment'>; n*reciprocal</span>
+    . x<span class='symbol'>=</span>n<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>         
+    . x<span class='symbol'>=</span>x<span class='symbol'>+</span><span class='symbol'>(</span>x<span class='symbol'><</span><span class='symbol'><</span><span class='number'>2</span>)
+    . x<span class='symbol'>=</span>y<span class='symbol'>-</span>x           <span class='comment'>; remainder</span>
+    . c<span class='symbol'>=</span>x<span class='symbol'>+</span><span class='number'>30h</span>         <span class='comment'>; c=(n%10)+'0'</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c     <span class='comment'>; *t++=c</span>
+  .endw
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span><span class='number'>0</span>
+  text.reverse s
+endf t
+
+<span class='comment'>; convert signed 32BIT integer to text</span>
+
+function i2t<span class='symbol'>,</span> n<span class='symbol'>,</span> t
+  alias n<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   t<span class='symbol'>=</span>a2<span class='symbol'>,</span> sign<span class='symbol'>=</span>a3
+  . sign<span class='symbol'>=</span><span class='number'>80000000h</span>
+  .if n<span class='symbol'>&</span>sign          <span class='comment'>; negate?</span>
+    . <span class='symbol'>-</span>n
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span><span class='number'>2Dh</span>   <span class='comment'>; prepend '-'</span>
+  .end
+  u2t                 <span class='comment'>; convert</span>
+endf
+
+<span class='comment'>; convert 32BIT hexadecimal number to text</span>
+
+function h2t<span class='symbol'>,</span> n<span class='symbol'>,</span> t
+  alias t<span class='symbol'>=</span>v1<span class='symbol'>,</span> s<span class='symbol'>=</span>v2<span class='symbol'>,</span><span class='symbol'>\</span>
+   n<span class='symbol'>=</span>v3<span class='symbol'>,</span> x<span class='symbol'>=</span>v4<span class='symbol'>,</span> hex<span class='symbol'>=</span>v5
+  . n<span class='symbol'>=</span>a1<span class='symbol'>,</span> t<span class='symbol'>=</span>a2<span class='symbol'>,</span> s<span class='symbol'>=</span>t
+  . hex<span class='symbol'>=</span>_hex
+  .if n<span class='symbol'>=</span><span class='number'>0</span>             <span class='comment'>; zero?</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span><span class='number'>30h</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span><span class='number'>0</span>
+    return t
+  .end
+  .while n            <span class='comment'>; *t++=*(hex+(n&(16-1)))</span>
+    . x<span class='symbol'>=</span>n<span class='symbol'>&</span><span class='number'>15</span>
+    ldrb x<span class='symbol'>,</span> <span class='symbol'>[</span>hex<span class='symbol'>,</span> x<span class='symbol'>]</span>  <span class='comment'>; (u8) x=hex[x]</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>x
+    . n<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>4</span>           <span class='comment'>; n/16</span>
+  .endw
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span><span class='number'>0</span>
+  text.reverse s
+  return t
+  _hex<span class='symbol'>:</span> db <span class='symbol'>\</span>
+   <span class='string'>'0123456789ABCDEF'</span> <span class='comment'>; 16 bytes</span>
+endf t
+
+<span class='comment'>; convert 32BIT binary number to text</span>
+
+function b2t<span class='symbol'>,</span> n<span class='symbol'>,</span> t
+  alias t<span class='symbol'>=</span>v1<span class='symbol'>,</span> s<span class='symbol'>=</span>v2<span class='symbol'>,</span><span class='symbol'>\</span>
+   n<span class='symbol'>=</span>v3<span class='symbol'>,</span> x<span class='symbol'>=</span>v4
+  . n<span class='symbol'>=</span>a1<span class='symbol'>,</span> t<span class='symbol'>=</span>a2<span class='symbol'>,</span> s<span class='symbol'>=</span>t
+  .if n<span class='symbol'>=</span><span class='number'>0</span>             <span class='comment'>; zero?</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span><span class='number'>30h</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span><span class='number'>0</span>
+    return t
+  .end
+  .while n            <span class='comment'>; *t++=(n&1)+'0'</span>
+    . x<span class='symbol'>=</span>n<span class='symbol'>&</span><span class='number'>1</span>, x<span class='symbol'>+</span><span class='number'>30h</span>
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>x
+    . n<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>1</span>           <span class='comment'>; n/2</span>
+  .endw
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>t<span class='symbol'>=</span><span class='number'>0</span>
+  text.reverse s
+endf t
+
+<span class='comment'>; t2x(t) ; text to number</span>
+
+<span class='comment'>; convert text to unsigned 32BIT integer</span>
+
+function t2u<span class='symbol'>,</span> t
+  alias t<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v2<span class='symbol'>,</span> n<span class='symbol'>=</span>v3
+  . t<span class='symbol'>=</span>a1<span class='symbol'>,</span> <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t
+  .if c<span class='symbol'>=</span><span class='number'>30h</span>           <span class='comment'>; skip preceding</span>
+    .while c<span class='symbol'>=</span><span class='number'>30h</span>      <span class='comment'>; '0's...</span>
+      . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span>
+    .endw
+    . t<span class='symbol'>-</span><span class='symbol'>-</span>
+  .end
+  .if c<span class='symbol'>=</span><span class='number'>0</span>             <span class='comment'>; 0 value?</span>
+    return <span class='number'>0</span>
+  .end
+  . n<span class='symbol'>=</span><span class='number'>0</span>
+  .forever
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>
+      return n
+    .end
+    . n<span class='symbol'>+</span><span class='symbol'>(</span>n<span class='symbol'><</span><span class='symbol'><</span><span class='number'>2</span>)<span class='symbol'>,</span> n<span class='symbol'>+</span>n   <span class='comment'>; n=n*10+*t++-'0'</span>
+    . n<span class='symbol'>-</span><span class='number'>30h</span>, n<span class='symbol'>+</span>c
+  .endfv
+endf
+
+<span class='comment'>; convert text to signed 32BIT integer</span>
+
+function t2i<span class='symbol'>,</span> t
+  alias t<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v2<span class='symbol'>,</span> negate<span class='symbol'>=</span>v3
+  . t<span class='symbol'>=</span>a1<span class='symbol'>,</span> <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t
+  . negate<span class='symbol'>=</span><span class='number'>0</span>
+  .if c<span class='symbol'>=</span><span class='string'>'-'</span>           <span class='comment'>; negative?</span>
+    . t<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>,</span> negate<span class='symbol'>=</span><span class='number'>1</span>   <span class='comment'>; skip</span>
+  .end
+  t2u t
+  .if negate
+    . <span class='symbol'>-</span>a1
+  .end
+endf
+
+<span class='comment'>; convert hexadecimal text to number</span>
+
+function t2h<span class='symbol'>,</span> t       <span class='comment'>; text to hexadecimal</span>
+  alias t<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v2<span class='symbol'>,</span> n<span class='symbol'>=</span>v3
+  . t<span class='symbol'>=</span>a1<span class='symbol'>,</span> <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t
+  .if c<span class='symbol'>=</span><span class='number'>30h</span>           <span class='comment'>; skip preceding</span>
+    .while c<span class='symbol'>=</span><span class='number'>30h</span>      <span class='comment'>; '0's...</span>
+      . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span>
+    .endw
+    . t<span class='symbol'>-</span><span class='symbol'>-</span>
+  .end
+  .if c<span class='symbol'>=</span><span class='number'>0</span>             <span class='comment'>; 0 value?</span>
+    return <span class='number'>0</span>
+  .end
+  . n<span class='symbol'>=</span><span class='number'>0</span>
+  .forever
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>
+      return n
+    .end
+    . n<span class='symbol'><</span><span class='symbol'><</span><span class='number'>4</span>            <span class='comment'>; n=n*16+c2h(*t++)</span>
+    .if c<span class='symbol'><</span><span class='symbol'>=</span><span class='number'>39h</span>        <span class='comment'>; 0-9</span>
+      . c<span class='symbol'>-</span><span class='number'>30h</span>
+    .else.if c<span class='symbol'>></span><span class='symbol'>=</span><span class='number'>97</span>    <span class='comment'>; a-f</span>
+      . c<span class='symbol'>-</span><span class='number'>57h</span>
+    .else             <span class='comment'>; A-F</span>
+      . c<span class='symbol'>-</span><span class='number'>37h</span>
+    .end
+    . n<span class='symbol'>+</span>c
+  .endfv
+endf
+
+<span class='comment'>; convert binary text to number</span>
+
+function t2b<span class='symbol'>,</span> t       <span class='comment'>; text to binary</span>
+  alias t<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v2<span class='symbol'>,</span> n<span class='symbol'>=</span>v3
+  . t<span class='symbol'>=</span>a1<span class='symbol'>,</span> <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t
+  .if c<span class='symbol'>=</span><span class='number'>30h</span>           <span class='comment'>; skip preceding</span>
+    .while c<span class='symbol'>=</span><span class='number'>30h</span>      <span class='comment'>; '0's...</span>
+      . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span>
+    .endw
+    . t<span class='symbol'>-</span><span class='symbol'>-</span>
+  .end
+  .if c<span class='symbol'>=</span><span class='number'>0</span>             <span class='comment'>; 0 value?</span>
+    return <span class='number'>0</span>
+  .end
+  . n<span class='symbol'>=</span><span class='number'>0</span>
+  .forever
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t<span class='symbol'>+</span><span class='symbol'>+</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>
+      return n
+    .end
+    . n<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>, n<span class='symbol'>+</span>c       <span class='comment'>; n=n*2+*t++-'0'</span>
+    . n<span class='symbol'>-</span><span class='number'>30h</span>
+  .endfv
+endf
+
+<span class='comment'>;;;;;;;;;;;;;;;;;;;;; PRINT ;;;;;;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; 2-DO: print formatted text to buffer</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;;;; PARSE TEXT ;;;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; skip while type and not 0</span>
+
+<span class='comment'>; get p=text.skip.while p, C.WHITE</span>
+
+function text.skip.while<span class='symbol'>,</span> t<span class='symbol'>,</span> type
+  alias t<span class='symbol'>=</span>a1<span class='symbol'>,</span> type<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>a3<span class='symbol'>,</span> p<span class='symbol'>=</span>a4<span class='symbol'>,</span> n<span class='symbol'>=</span>v1
+  .forever
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t
+    .if c<span class='symbol'>=</span><span class='number'>0</span>
+      return <span class='number'>0</span>
+    .end
+    .if c<span class='symbol'>=</span><span class='number'>0Ah</span>
+      . p<span class='symbol'>=</span>line.n<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> n<span class='symbol'>=</span><span class='symbol'>*</span>p
+      . n<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> <span class='symbol'>*</span>p<span class='symbol'>=</span>n
+    .end
+    . p<span class='symbol'>=</span>TLT<span class='symbol'>,</span> p<span class='symbol'>+</span>c
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>p<span class='symbol'>,</span> c<span class='symbol'>&</span>type
+    .breakz
+    . t<span class='symbol'>+</span><span class='symbol'>+</span>
+  .endfv
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t
+  .if c<span class='symbol'>=</span><span class='number'>0</span>
+    return <span class='number'>0</span>
+  .end
+endf
+
+<span class='comment'>; skip until type and while not 0</span>
+
+<span class='comment'>; get p=text.skip.until p, C.RETURN</span>
+
+function text.skip.until<span class='symbol'>,</span> t<span class='symbol'>,</span> type
+  alias t<span class='symbol'>=</span>a1<span class='symbol'>,</span> type<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>a3<span class='symbol'>,</span> p<span class='symbol'>=</span>a4<span class='symbol'>,</span> n<span class='symbol'>=</span>v1
+  .forever
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t
+    .if c<span class='symbol'>=</span><span class='number'>0</span>
+      return <span class='number'>0</span>
+    .end
+    .if c<span class='symbol'>=</span><span class='number'>0Ah</span>
+      . p<span class='symbol'>=</span>line.n<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> n<span class='symbol'>=</span><span class='symbol'>*</span>p
+      . n<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> <span class='symbol'>*</span>p<span class='symbol'>=</span>n
+    .end
+    . p<span class='symbol'>=</span>TLT<span class='symbol'>,</span> p<span class='symbol'>+</span>c
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>p<span class='symbol'>,</span> c<span class='symbol'>&</span>type
+    .breakn
+    . t<span class='symbol'>+</span><span class='symbol'>+</span>
+  .endfv
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>t
+  .if c<span class='symbol'>=</span><span class='number'>0</span>
+    return <span class='number'>0</span>
+  .end
+endf
+
+<span class='comment'>; copy while type and not 0</span>
+
+<span class='comment'>; get s=text.copy.while t, s, C.NAME</span>
+
+function text.copy.while<span class='symbol'>,</span> a<span class='symbol'>,</span> b<span class='symbol'>,</span> type
+  alias a<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   type<span class='symbol'>=</span>a3<span class='symbol'>,</span> c<span class='symbol'>=</span>a4<span class='symbol'>,</span> p<span class='symbol'>=</span>v1<span class='symbol'>,</span> n<span class='symbol'>=</span>v2
+  .forever
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>b
+    .if c<span class='symbol'>=</span><span class='number'>0</span>
+      go .e
+    .end
+    .if c<span class='symbol'>=</span><span class='number'>0Ah</span>
+      . p<span class='symbol'>=</span>line.n<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> n<span class='symbol'>=</span><span class='symbol'>*</span>p
+      . n<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> <span class='symbol'>*</span>p<span class='symbol'>=</span>n
+    .end
+    . p<span class='symbol'>=</span>TLT<span class='symbol'>,</span> p<span class='symbol'>+</span>c
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>p<span class='symbol'>,</span> c<span class='symbol'>&</span>type
+    .breakz
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>a<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span><span class='symbol'>*</span>b<span class='symbol'>+</span><span class='symbol'>+</span>
+  .endfv
+  .e<span class='symbol'>:</span>
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>a<span class='symbol'>=</span><span class='number'>0</span>, <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>b
+  .if c<span class='symbol'>=</span><span class='number'>0</span>
+    return <span class='number'>0</span>
+  .end
+endf b
+
+<span class='comment'>; copy until type and while not 0</span>
+
+<span class='comment'>; get s=text.copy.until t, s, C.END</span>
+
+function text.copy.until<span class='symbol'>,</span> a<span class='symbol'>,</span> b<span class='symbol'>,</span> type
+  alias a<span class='symbol'>=</span>a1<span class='symbol'>,</span> b<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   type<span class='symbol'>=</span>a3<span class='symbol'>,</span> c<span class='symbol'>=</span>a4<span class='symbol'>,</span> p<span class='symbol'>=</span>v1<span class='symbol'>,</span> n<span class='symbol'>=</span>v2
+  .forever
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>b
+    .if c<span class='symbol'>=</span><span class='number'>0</span>
+      return <span class='number'>0</span>
+    .end
+    .if c<span class='symbol'>=</span><span class='number'>0Ah</span>
+      . p<span class='symbol'>=</span>line.n<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> n<span class='symbol'>=</span><span class='symbol'>*</span>p
+      . n<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> <span class='symbol'>*</span>p<span class='symbol'>=</span>n
+    .end
+    . p<span class='symbol'>=</span>TLT<span class='symbol'>,</span> p<span class='symbol'>+</span>c
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>p<span class='symbol'>,</span> c<span class='symbol'>&</span>type
+    .breakn
+    . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>a<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span><span class='symbol'>*</span>b<span class='symbol'>+</span><span class='symbol'>+</span>
+  .endfv
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> <span class='symbol'>*</span>a<span class='symbol'>=</span><span class='number'>0</span>, <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>b
+  .if c<span class='symbol'>=</span><span class='number'>0</span>
+    return <span class='number'>0</span>
+  .end
+endf b
+
+<span class='comment'>;;;;;;;;;;;;;;;;;; SOURCE, TOKEN ;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; safer, easier global skip/copy while/until</span>
+
+macro define.source <span class='symbol'>{</span>
+ align <span class='number'>4</span>
+ void source.p<span class='symbol'>,</span> destiny.p<span class='symbol'>,</span> token.p
+ integer token.type<span class='symbol'>,</span> token.value<span class='symbol'>,</span><span class='symbol'>\</span>
+  token.size<span class='symbol'>,</span> line.n<span class='symbol'>,</span> n.lines
+<span class='symbol'>}</span>
+
+macro set.source r
+ <span class='symbol'>{</span> . r12<span class='symbol'>=</span>source.p<span class='symbol'>,</span> r11<span class='symbol'>=</span>r<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> <span class='symbol'>*</span>r12<span class='symbol'>=</span>r11 <span class='symbol'>}</span>
+
+macro set.token r
+ <span class='symbol'>{</span> . r12<span class='symbol'>=</span>token.p<span class='symbol'>,</span> r11<span class='symbol'>=</span>r<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> <span class='symbol'>*</span>r12<span class='symbol'>=</span>r11 <span class='symbol'>}</span>
+
+macro set.stream s<span class='symbol'>,</span> t <span class='symbol'>{</span>
+  set.source s
+  set.token t
+<span class='symbol'>}</span>
+
+macro get.source s<span class='symbol'>,</span> t <span class='symbol'>{</span>
+  . s<span class='symbol'>=</span>source.p<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> s<span class='symbol'>=</span><span class='symbol'>*</span>s
+  if <span class='symbol'>~</span>t eq
+    . t<span class='symbol'>=</span>token.p<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> t<span class='symbol'>=</span><span class='symbol'>*</span>t
+  end if
+<span class='symbol'>}</span>
+
+<span class='comment'>; 2-DO...</span>
+
+get.destiny fix get.console
+set.destiny fix set.console
+save.destiny fix save.console
+
+macro get.token.p t
+ <span class='symbol'>{</span> . t<span class='symbol'>=</span>token.p<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> t<span class='symbol'>=</span><span class='symbol'>*</span>t <span class='symbol'>}</span>
+
+macro set.token.x x<span class='symbol'>,</span> v
+ <span class='symbol'>{</span>  . r12<span class='symbol'>=</span>token<span class='symbol'>#</span>x<span class='symbol'>,</span> r11<span class='symbol'>=</span>v<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> <span class='symbol'>*</span>r12<span class='symbol'>=</span>r11 <span class='symbol'>}</span>
+
+macro set.token.type v <span class='symbol'>{</span> set.token.x .type<span class='symbol'>,</span> v <span class='symbol'>}</span>
+macro set.token.class v <span class='symbol'>{</span> set.token.x .class<span class='symbol'>,</span> v <span class='symbol'>}</span>
+macro set.token.value v <span class='symbol'>{</span> set.token.x .value<span class='symbol'>,</span> v <span class='symbol'>}</span>
+
+macro get.token.value x
+<span class='symbol'>{</span> . x<span class='symbol'>=</span>token.value<span class='symbol'>,</span> <span class='symbol'>(</span>u32<span class='symbol'>)</span> x<span class='symbol'>=</span><span class='symbol'>*</span>x <span class='symbol'>}</span>
+
+<span class='comment'>; skip/copy while/until type...</span>
+
+function skip.while<span class='symbol'>,</span> type
+  alias p<span class='symbol'>=</span>v1<span class='symbol'>,</span> type<span class='symbol'>=</span>v2
+  . type<span class='symbol'>=</span>a1
+  get.source p
+  try p<span class='symbol'>=</span>text.skip.while p<span class='symbol'>,</span> type
+  set.source p
+endf p
+
+function skip.until<span class='symbol'>,</span> type
+  alias p<span class='symbol'>=</span>v1<span class='symbol'>,</span> type<span class='symbol'>=</span>v2
+  . type<span class='symbol'>=</span>a1
+  get.source p
+  try p<span class='symbol'>=</span>text.skip.until p<span class='symbol'>,</span> type
+  set.source p
+endf p
+
+function copy.while<span class='symbol'>,</span> type
+  alias p<span class='symbol'>=</span>v1<span class='symbol'>,</span> t<span class='symbol'>=</span>v2<span class='symbol'>,</span> type<span class='symbol'>=</span>v3
+  . type<span class='symbol'>=</span>a1
+  get.source p<span class='symbol'>,</span> t
+  try p<span class='symbol'>=</span>text.copy.while t<span class='symbol'>,</span> p<span class='symbol'>,</span> type
+  set.source p
+endf p
+
+function copy.until<span class='symbol'>,</span> type
+  alias p<span class='symbol'>=</span>v1<span class='symbol'>,</span> t<span class='symbol'>=</span>v2<span class='symbol'>,</span> type<span class='symbol'>=</span>v3
+  . type<span class='symbol'>=</span>a1
+  get.source p<span class='symbol'>,</span> t
+  try p<span class='symbol'>=</span>text.copy.until t<span class='symbol'>,</span> p<span class='symbol'>,</span> type
+  set.source p
+endf p
+
+macro skip.space   <span class='symbol'>{</span> skip.while C.SPACE <span class='symbol'>}</span>
+macro skip.white   <span class='symbol'>{</span> skip.while C.WHITE <span class='symbol'>}</span>
+macro skip.comment <span class='symbol'>{</span> skip.until C.RETURN <span class='symbol'>}</span>
+
+function skip.all
+  alias s<span class='symbol'>=</span>v1<span class='symbol'>,</span> c<span class='symbol'>=</span>v2
+  .white<span class='symbol'>:</span>
+  try skip.white
+  get.source s
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>s
+  .if c<span class='symbol'>=</span><span class='number'>0</span>
+    return <span class='number'>0</span>
+  .end
+  .if c<span class='symbol'>=</span>SEMI.C
+    try skip.comment
+    go .white
+  .end
+endf <span class='number'>1</span>
+
+<span class='comment'>; skip spaces then character. return 0</span>
+<span class='comment'>; if next c not key</span>
+
+function skip.c<span class='symbol'>,</span> key
+  alias p<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v2<span class='symbol'>,</span> key<span class='symbol'>=</span>v3
+  . key<span class='symbol'>=</span>a1
+  skip.space
+  get.source p
+  . <span class='symbol'>(</span>u8<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>p
+  .if c<span class='symbol'><</span><span class='symbol'>></span>key
+    return <span class='number'>0</span>
+  .end
+  . p<span class='symbol'>+</span><span class='symbol'>+</span>
+  set.source p
+endf p
+
+<span class='comment'>; ideas for parsing grammar:</span>
+
+<span class='comment'>; syntax: parse 'c' ; c=command/s</span>
+
+<span class='comment'>; '='      ; copy</span>
+<span class='comment'>; '>'      ; skip forward</span>
+<span class='comment'>; '<'      ; skip reverse</span>
+<span class='comment'>; '>1'     ; move right # times</span>
+<span class='comment'>; '<1'     ; move left # times</span>
+<span class='comment'>; '>ws'    ; skip while space/tab</span>
+<span class='comment'>; '>ur'    ; skip until return</span>
+<span class='comment'>; '>w_'    ; skip all whitespace</span>
+<span class='comment'>; '>w;'    ; skip all+comments</span>
+<span class='comment'>; '=u.'    ; copy until end/delimiter</span>
+<span class='comment'>; '=w#'    ; while digit</span>
+<span class='comment'>; '=w@'    ; while name/identifier</span>
+<span class='comment'>; '>w_=u.' ; skip whitespace then copy</span>
+
+<span class='comment'>; '=w(a-z|A-Z|0-9|_|.|?)'</pre><font color="#000000" size="5" face="Times New Roman">
+<p align="left"><u><i>
+Drawing Functions
+</i></u></p></font>
+
+<pre style="background:white; color:black;
+border:2px solid white; padding:.2em .2em;">
+<span class='comment'>; $$$$$$$$$$$$$$$$$$ MAGIC-ARM $$$$$$$$$$$$$$$$$$$</span>
+<span class='comment'>; *************** STAR^2 SOFTWARE ****************</span>
+<span class='comment'>; ?????????????????? DRAW.INC ????????????????????</span>
+
+<span class='comment'>; fast portable ARM graphics for RGB16 (5.6.5)</span>
+
+<span class='comment'>; vga.xy x, y  ; &vga[xy(x,y)]</span>
+<span class='comment'>; color.at     ; vga[xy(x,y)]</span>
+
+<span class='comment'>; clear.screen</span>
+
+<span class='comment'>; draw.pixel x, y, c</span>
+<span class='comment'>; draw.line.h x, y, w, c</span>
+<span class='comment'>; draw.line.v x, y, h, c</span>
+
+<span class='comment'>; draw.box x, y, w, h, c</span>
+<span class='comment'>; draw.box.t x, y, w, h, c, a</span>
+<span class='comment'>; draw.outline x, y, w, h, c</span>
+
+<span class='comment'>; draw.scanline x, y, w, p</span>
+<span class='comment'>; draw.scanline.t x, y, w, p</span>
+<span class='comment'>; draw.scanline.v x, y, w, p, c</span>
+
+<span class='comment'>; draw.bitmap x, y, w, h, p</span>
+<span class='comment'>; draw.bitmap.t x, y, w, h, p</span>
+<span class='comment'>; draw.bitmap.a x, y, w, h, p, a</span>
+
+<span class='comment'>; draw.fade x, y, w, h, c1, c2</span>
+<span class='comment'>; draw.shade x, y, w, h, c1, c2</span>
+<span class='comment'>; draw.black.bar x, y, w, h</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;;;;; DRAWING ;;;;;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; address &vga[(y*(screen.w*2))+(x*2)]...</span>
+
+function vga.xy<span class='symbol'>,</span> x<span class='symbol'>,</span> y
+  . a3<span class='symbol'>=</span>SCREEN.PITCH<span class='symbol'>,</span> a4<span class='symbol'>=</span>a2<span class='symbol'>*</span>a3
+  . a4<span class='symbol'>+</span><span class='symbol'>(</span>a1<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>)<span class='symbol'>,</span> a2<span class='symbol'>=</span>@vga<span class='symbol'>,</span> a1<span class='symbol'>=</span>a2<span class='symbol'>+</span>a4
+endf
+
+<span class='comment'>; erase screen with color/a1...</span>
+
+function clear.screen<span class='symbol'>,</span> c
+  alias vga<span class='symbol'>=</span>a3<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>a2<span class='symbol'>,</span> c<span class='symbol'>=</span>a1
+  . vga<span class='symbol'>=</span>@vga<span class='symbol'>,</span> w<span class='symbol'>=</span>SCREEN.N
+  .repeat w
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c
+  .endr
+endf
+
+<span class='comment'>;;;;;;;;;;;;;;;; DRAW PIXEL, LINE ;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; draw pixel: a1-a3=x/y/c...</span>
+
+function draw.pixel<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> c
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>v1
+  . c<span class='symbol'>=</span>a3
+  vga.xy
+  . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>=</span>c
+endf
+
+<span class='comment'>; draw horizontal line: a1-a4=x/y/w/c...</span>
+
+function draw.line.h<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> c
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v1<span class='symbol'>,</span> w<span class='symbol'>=</span>v2
+  . c<span class='symbol'>=</span>a4<span class='symbol'>,</span> w<span class='symbol'>=</span>a3
+  vga.xy
+  .repeat w
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c
+  .endr
+endf
+
+<span class='comment'>; draw vertical line: a1-a4=x/y/h/c...</span>
+
+function draw.line.v<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> h<span class='symbol'>,</span> c
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   h<span class='symbol'>=</span>v1<span class='symbol'>,</span> c<span class='symbol'>=</span>v2<span class='symbol'>,</span> pitch<span class='symbol'>=</span>v3
+  . c<span class='symbol'>=</span>a4<span class='symbol'>,</span> h<span class='symbol'>=</span>a3
+  vga.xy
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH
+  .repeat h
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>=</span>c<span class='symbol'>,</span> vga<span class='symbol'>+</span>pitch
+  .endr
+endf
+
+<span class='comment'>;;;;;;;;;;;;;;; DRAW BOX, OUTLINE ;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; draw solid rectangle: a1-v1=x/y/w/h/c...</span>
+
+function draw.box
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   sw<span class='symbol'>=</span>v2<span class='symbol'>,</span> w<span class='symbol'>=</span>v3<span class='symbol'>,</span> h<span class='symbol'>=</span>v4<span class='symbol'>,</span><span class='symbol'>\</span>
+   pitch<span class='symbol'>=</span>a2<span class='symbol'>,</span> wb<span class='symbol'>=</span>a3
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> sw<span class='symbol'>=</span>w<span class='symbol'>,</span> h<span class='symbol'>=</span>a4    <span class='comment'>; save w/h</span>
+  vga.xy
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH  <span class='comment'>; screen+row</span>
+  . wb<span class='symbol'>=</span>w<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>             <span class='comment'>; w in bytes</span>
+  .repeat h             <span class='comment'>; h # times</span>
+    . w<span class='symbol'>=</span>sw              <span class='comment'>; reset saved</span>
+    .repeat w           <span class='comment'>; w # times</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c  <span class='comment'>; copy color</span>
+    .endr
+    . vga<span class='symbol'>+</span>pitch<span class='symbol'>,</span> vga<span class='symbol'>-</span>wb <span class='comment'>; advance</span>
+  .endr
+endf
+
+macro draw.box x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> c <span class='symbol'>{</span>
+  if <span class='symbol'>~</span>x eq
+    . v1<span class='symbol'>=</span>c<span class='symbol'>,</span> a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h
+    draw.box
+  end if
+<span class='symbol'>}</span>
+
+<span class='comment'>; draw rectangle outline...</span>
+
+function draw.outline
+  alias c<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   x<span class='symbol'>=</span>v2<span class='symbol'>,</span> y<span class='symbol'>=</span>v3<span class='symbol'>,</span> w<span class='symbol'>=</span>v4<span class='symbol'>,</span> h<span class='symbol'>=</span>v5
+  . x<span class='symbol'>=</span>a1<span class='symbol'>,</span> y<span class='symbol'>=</span>a2<span class='symbol'>,</span> w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4
+  vga.xy
+  draw.line.h x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> c   <span class='comment'>; top: x, y, w</span>
+  draw.line.v x<span class='symbol'>,</span> y<span class='symbol'>,</span> h<span class='symbol'>,</span> c   <span class='comment'>; left: x, y, h</span>
+  . a1<span class='symbol'>=</span>x<span class='symbol'>+</span>w<span class='symbol'>,</span> a1<span class='symbol'>-</span><span class='symbol'>-</span>           <span class='comment'>; right: x+w-1</span>
+  draw.line.v <span class='symbol'>\</span>
+   a1<span class='symbol'>,</span> y<span class='symbol'>+</span><span class='number'>1</span>, h<span class='symbol'>-</span><span class='number'>1</span>, c
+  . a2<span class='symbol'>=</span>y<span class='symbol'>+</span>h<span class='symbol'>,</span> a2<span class='symbol'>-</span><span class='symbol'>-</span>           <span class='comment'>; bottom: y+h-1</span>
+  draw.line.h x<span class='symbol'>,</span> a2<span class='symbol'>,</span> w<span class='symbol'>,</span> c
+endf
+
+macro draw.outline x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> c <span class='symbol'>{</span>
+  if <span class='symbol'>~</span>x eq
+    . a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h<span class='symbol'>,</span> v1<span class='symbol'>=</span>c
+  end if
+  draw.outline
+<span class='symbol'>}</span>
+
+<span class='comment'>; draw rectangle with transparency...</span>
+<span class='comment'>; a1-a4=x/y/w/h. v5=color, v6=alpha</span>
+
+function draw.box.t
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>v3<span class='symbol'>,</span> h<span class='symbol'>=</span>v4<span class='symbol'>,</span> sw<span class='symbol'>=</span>v2<span class='symbol'>,</span><span class='symbol'>\</span>
+   cl<span class='symbol'>=</span>v5<span class='symbol'>,</span> a<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   pitch<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   wb<span class='symbol'>=</span>a3<span class='symbol'>,</span> sc<span class='symbol'>=</span>v7
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> sw<span class='symbol'>=</span>w<span class='symbol'>,</span> h<span class='symbol'>=</span>a4    <span class='comment'>; save w/h</span>
+  vga.xy
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH  <span class='comment'>; screen+row</span>
+  . wb<span class='symbol'>=</span>w<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>             <span class='comment'>; w in bytes</span>
+  .repeat h             <span class='comment'>; h # times</span>
+    . w<span class='symbol'>=</span>sw              <span class='comment'>; reset saved</span>
+    .repeat w           <span class='comment'>; w # times</span>
+     . <span class='symbol'>(</span>u16<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>vga     <span class='comment'>; screen color</span>
+      pusha
+      mix c<span class='symbol'>,</span> cl<span class='symbol'>,</span> a      <span class='comment'>; combine</span>
+      . c<span class='symbol'>=</span>a1
+      popa
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c  <span class='comment'>; copy</span>
+    .endr
+    . vga<span class='symbol'>+</span>pitch<span class='symbol'>,</span> vga<span class='symbol'>-</span>wb <span class='comment'>; advance</span>
+  .endr
+endf
+
+macro draw.box.t x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> c<span class='symbol'>,</span> a <span class='symbol'>{</span>
+  . a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h<span class='symbol'>,</span> v5<span class='symbol'>=</span>c<span class='symbol'>,</span> v6<span class='symbol'>=</span>a
+  draw.box.t
+<span class='symbol'>}</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;; DRAW SCANLINE ;;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; draw 16BPP scanline. a1-a4=x/y/w/pixels...</span>
+
+function draw.scanline<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> p
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>          <span class='comment'>; aliases</span>
+   p<span class='symbol'>=</span>v1<span class='symbol'>,</span> w<span class='symbol'>=</span>v2
+  . p<span class='symbol'>=</span>a4<span class='symbol'>,</span> w<span class='symbol'>=</span>a3            <span class='comment'>; save w</span>
+  vga.xy                  <span class='comment'>; &vga(x,y)</span>
+  .repeat w               <span class='comment'>; w # times</span>
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span><span class='symbol'>*</span>p<span class='symbol'>+</span><span class='symbol'>+</span>   <span class='comment'>; copy pixel</span>
+  .endr
+endf
+
+<span class='comment'>; draw with transparent color...</span>
+
+function draw.scanline.t<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> p
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>     <span class='comment'>; aliases</span>
+   c<span class='symbol'>=</span>a2<span class='symbol'>,</span> key<span class='symbol'>=</span>v2<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>v3<span class='symbol'>,</span> p<span class='symbol'>=</span>v1
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> p<span class='symbol'>=</span>a4       <span class='comment'>; save w/p</span>
+  vga.xy             <span class='comment'>; &vga(x,y)</span>
+   . <span class='symbol'>(</span>u16<span class='symbol'>)</span> key<span class='symbol'>=</span><span class='symbol'>*</span>p    <span class='comment'>; color at 0x0</span>
+  .repeat w          <span class='comment'>; w # times</span>
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>p<span class='symbol'>+</span><span class='symbol'>+</span>   <span class='comment'>; get source pixel</span>
+    .if c<span class='symbol'><</span><span class='symbol'>></span>key       <span class='comment'>; opaque?</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>=</span>c <span class='comment'>; copy to screen</span>
+    .end
+    . vga<span class='symbol'>+</span><span class='number'>2</span>          <span class='comment'>; next</span>
+  .endr
+endf
+
+<span class='comment'>; draw 16BPP variant scanline.</span>
+<span class='comment'>; a1-v1=x/y/w/c/pixels...</span>
+
+function draw.scanline.v
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>       <span class='comment'>; aliases</span>
+   p<span class='symbol'>=</span>v1<span class='symbol'>,</span> c<span class='symbol'>=</span>v2<span class='symbol'>,</span> s<span class='symbol'>=</span>v3<span class='symbol'>,</span><span class='symbol'>\</span>
+   cl<span class='symbol'>=</span>v4<span class='symbol'>,</span> x<span class='symbol'>=</span>v5<span class='symbol'>,</span> w<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   n<span class='symbol'>=</span>v7
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> cl<span class='symbol'>=</span>a4        <span class='comment'>; save w, color</span>
+  vga.xy               <span class='comment'>; &vga(x,y)</span>
+  .repeat w            <span class='comment'>; w # times</span>
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>p<span class='symbol'>+</span><span class='symbol'>+</span>     <span class='comment'>; get source pixel</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>            <span class='comment'>; black, 100% invisible</span>
+      go .next
+    .end
+    . x<span class='symbol'>=</span>WHITE
+    .if c<span class='symbol'>=</span>x            <span class='comment'>; white, 100% visible</span>
+      . c<span class='symbol'>=</span>cl
+      go .draw
+    .end
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> s<span class='symbol'>=</span><span class='symbol'>*</span>vga     <span class='comment'>; else mixed</span>
+    . n<span class='symbol'>=</span>c<span class='symbol'>&</span><span class='number'>11111b</span>, n<span class='symbol'><</span><span class='symbol'><</span><span class='number'>3</span> <span class='comment'>; alpha intensity</span>
+    .if n<span class='symbol'>></span><span class='symbol'>=</span><span class='number'>252</span>         <span class='comment'>; invisible</span>
+      go .next         <span class='comment'>; skip</span>
+    .end
+    .if n<span class='symbol'><</span><span class='symbol'>=</span><span class='number'>4</span>           <span class='comment'>; pure</span>
+      . c<span class='symbol'>=</span>cl
+      go .draw
+    .end
+    pusha
+    mix s<span class='symbol'>,</span> cl<span class='symbol'>,</span> n       <span class='comment'>; combine</span>
+    . c<span class='symbol'>=</span>r0             <span class='comment'>; screen+color</span>
+    popa
+    .draw<span class='symbol'>:</span>
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>=</span>c
+    .next<span class='symbol'>:</span>
+    . vga<span class='symbol'>+</span><span class='number'>2</span>            <span class='comment'>; next</span>
+  .endr
+endf
+
+macro draw.scanline.v x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> c<span class='symbol'>,</span> p <span class='symbol'>{</span>
+  . a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>c<span class='symbol'>,</span> v1<span class='symbol'>=</span>p
+  draw.scanline.v
+<span class='symbol'>}</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;;; DRAW BITMAP ;;;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; draw 15/16BPP bitmap. a1-a4=x/y/w/h.</span>
+<span class='comment'>; v1=pixels...</span>
+
+function draw.bitmap
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>         <span class='comment'>; aliases</span>
+   image<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>v2<span class='symbol'>,</span> h<span class='symbol'>=</span>v3<span class='symbol'>,</span> sw<span class='symbol'>=</span>v4<span class='symbol'>,</span><span class='symbol'>\</span>   <span class='comment'>; sizes, saved w</span>
+   pitch<span class='symbol'>=</span>v5<span class='symbol'>,</span> iwb<span class='symbol'>=</span>v6
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4<span class='symbol'>,</span> sw<span class='symbol'>=</span>w     <span class='comment'>; save size</span>
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH   <span class='comment'>; screen+image</span>
+  . iwb<span class='symbol'>=</span>w<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>             <span class='comment'>; w in bytes</span>
+  vga.xy                 <span class='comment'>; &vga(x,y)</span>
+  .repeat h              <span class='comment'>; h # times</span>
+    . w<span class='symbol'>=</span>sw               <span class='comment'>; get saved w</span>
+    .repeat w            <span class='comment'>; w # times</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>\</span>
+       <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span><span class='symbol'>*</span>image<span class='symbol'>+</span><span class='symbol'>+</span>   <span class='comment'>; copy pixel</span>
+    .endr
+    . vga<span class='symbol'>+</span>pitch<span class='symbol'>,</span> vga<span class='symbol'>-</span>iwb <span class='comment'>; advance</span>
+  .endr
+endf
+
+macro draw.bitmap p<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h <span class='symbol'>{</span>
+  if <span class='symbol'>~</span>p eq
+    . v1<span class='symbol'>=</span>p<span class='symbol'>,</span> a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h
+  end if
+  draw.bitmap
+<span class='symbol'>}</span>
+
+<span class='comment'>; draw bitmap with transparency</span>
+<span class='comment'>; by upper left pixel color (0x0).</span>
+<span class='comment'>; a1-a4=x/y/w/h. v1=pixels...</span>
+
+function draw.bitmap.t
+  alias <span class='symbol'>\</span>                 <span class='comment'>; aliases</span>
+   vga<span class='symbol'>=</span>a1<span class='symbol'>,</span> image<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>v2<span class='symbol'>,</span> h<span class='symbol'>=</span>v3<span class='symbol'>,</span> sw<span class='symbol'>=</span>v4<span class='symbol'>,</span><span class='symbol'>\</span>    <span class='comment'>; sizes, saved w</span>
+   pitch<span class='symbol'>=</span>v5<span class='symbol'>,</span> iwb<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   key<span class='symbol'>=</span>v7<span class='symbol'>,</span> c<span class='symbol'>=</span>a2
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4<span class='symbol'>,</span> sw<span class='symbol'>=</span>w      <span class='comment'>; save size</span>
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH    <span class='comment'>; screen+image</span>
+  . iwb<span class='symbol'>=</span>w<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>              <span class='comment'>; w in bytes</span>
+  . <span class='symbol'>(</span>u16<span class='symbol'>)</span> key<span class='symbol'>=</span><span class='symbol'>*</span>image      <span class='comment'>; transparent color</span>
+  vga.xy                  <span class='comment'>; &vga(x,y)</span>
+  .repeat h               <span class='comment'>; h # times</span>
+    . w<span class='symbol'>=</span>sw
+    .repeat w             <span class='comment'>; w # times</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>image<span class='symbol'>+</span><span class='symbol'>+</span>
+      .if c<span class='symbol'><</span><span class='symbol'>></span>key          <span class='comment'>; opaque?</span>
+        . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c  <span class='comment'>; copy pixel</span>
+      .else
+        . vga<span class='symbol'>+</span><span class='number'>2</span>           <span class='comment'>; next</span>
+      .end
+    .endr
+    . vga<span class='symbol'>+</span>pitch<span class='symbol'>,</span> vga<span class='symbol'>-</span>iwb  <span class='comment'>; advance</span>
+  .endr
+endf
+
+macro draw.bitmap.t p<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h <span class='symbol'>{</span>
+  if <span class='symbol'>~</span>p eq
+   . v1<span class='symbol'>=</span>p<span class='symbol'>,</span> a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h
+  end if
+  draw.bitmap.t
+<span class='symbol'>}</span>
+
+<span class='comment'>; draw bitmap with alpha in v8</span>
+
+function draw.bitmap.a
+  alias <span class='symbol'>\</span>                 <span class='comment'>; aliases</span>
+   vga<span class='symbol'>=</span>a1<span class='symbol'>,</span> image<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>v2<span class='symbol'>,</span> h<span class='symbol'>=</span>v3<span class='symbol'>,</span> sw<span class='symbol'>=</span>v4<span class='symbol'>,</span><span class='symbol'>\</span>    <span class='comment'>; sizes, saved w</span>
+   pitch<span class='symbol'>=</span>v5<span class='symbol'>,</span> iwb<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   key<span class='symbol'>=</span>v7<span class='symbol'>,</span> a<span class='symbol'>=</span>v8<span class='symbol'>,</span> c<span class='symbol'>=</span>r12
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4<span class='symbol'>,</span> sw<span class='symbol'>=</span>w      <span class='comment'>; save size</span>
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH    <span class='comment'>; screen+image</span>
+  . iwb<span class='symbol'>=</span>w<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>              <span class='comment'>; w in bytes</span>
+  . <span class='symbol'>(</span>u16<span class='symbol'>)</span> key<span class='symbol'>=</span><span class='symbol'>*</span>image      <span class='comment'>; transparent color</span>
+  vga.xy                  <span class='comment'>; &vga(x,y)</span>
+  .repeat h               <span class='comment'>; h # times</span>
+    . w<span class='symbol'>=</span>sw
+    .repeat w             <span class='comment'>; w # times</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>image<span class='symbol'>+</span><span class='symbol'>+</span>
+      .if c<span class='symbol'><</span><span class='symbol'>></span>key          <span class='comment'>; opaque?</span>
+        pusha
+        . <span class='symbol'>(</span>u16<span class='symbol'>)</span> a2<span class='symbol'>=</span><span class='symbol'>*</span>vga
+        . a1<span class='symbol'>=</span>c<span class='symbol'>,</span> a3<span class='symbol'>=</span>a
+        mix
+        . c<span class='symbol'>=</span>a1
+        popa
+        . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c  <span class='comment'>; copy pixel</span>
+      .else
+        . vga<span class='symbol'>+</span><span class='number'>2</span>           <span class='comment'>; next</span>
+      .end
+    .endr
+    . vga<span class='symbol'>+</span>pitch<span class='symbol'>,</span> vga<span class='symbol'>-</span>iwb  <span class='comment'>; advance</span>
+  .endr
+endf
+
+macro draw.bitmap.a p<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> a <span class='symbol'>{</span>
+  if <span class='symbol'>~</span>p eq
+   . v1<span class='symbol'>=</span>p<span class='symbol'>,</span> a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h<span class='symbol'>,</span> v8<span class='symbol'>=</span>a
+  end if
+  draw.bitmap.a
+<span class='symbol'>}</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;; DRAW GRADIENTS ;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; draw gradual vertical fade. parameters:</span>
+<span class='comment'>; a1-a4=x/y/w/h. v5-v6=c1/c2</span>
+
+function draw.fade
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   r<span class='symbol'>=</span>v1<span class='symbol'>,</span> g<span class='symbol'>=</span>v2<span class='symbol'>,</span> b<span class='symbol'>=</span>v3<span class='symbol'>,</span><span class='symbol'>\</span>
+   rn<span class='symbol'>=</span>v4<span class='symbol'>,</span> gn<span class='symbol'>=</span>v5<span class='symbol'>,</span> bn<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   c1<span class='symbol'>=</span>v7<span class='symbol'>,</span> c2<span class='symbol'>=</span>v8<span class='symbol'>,</span> h<span class='symbol'>=</span>r12
+
+  pusha                 <span class='comment'>; save a1-a4=x/y/w/h</span>
+  . c1<span class='symbol'>=</span>v5<span class='symbol'>,</span> c2<span class='symbol'>=</span>v6<span class='symbol'>,</span> h<span class='symbol'>=</span>a4  <span class='comment'>; save colors+h</span>
+  delta8 c1<span class='symbol'>,</span> c2<span class='symbol'>,</span> <span class='number'>11</span>, h  <span class='comment'>; get deltas...</span>
+  . rn<span class='symbol'>=</span>a1
+  delta8 c1<span class='symbol'>,</span> c2<span class='symbol'>,</span> <span class='number'>5</span>, h
+  . gn<span class='symbol'>=</span>a1
+  delta8 c1<span class='symbol'>,</span> c2<span class='symbol'>,</span> <span class='number'>0</span>, h
+  . bn<span class='symbol'>=</span>a1<span class='symbol'>,</span> a1<span class='symbol'>=</span>c1        <span class='comment'>; extract and scale</span>
+  get.rgb               <span class='comment'>; r/g/b components</span>
+  . r<span class='symbol'>=</span>a1<span class='symbol'><</span><span class='symbol'><</span><span class='number'>8</span>
+  . g<span class='symbol'>=</span>a2<span class='symbol'><</span><span class='symbol'><</span><span class='number'>8</span>
+  . b<span class='symbol'>=</span>a3<span class='symbol'><</span><span class='symbol'><</span><span class='number'>8</span>
+  popa                  <span class='comment'>; restore x/y/w/h</span>
+  push a3<span class='symbol'>-</span>a4            <span class='comment'>; save w/h</span>
+  vga.xy                <span class='comment'>; x/y no longer needed</span>
+  pop a3<span class='symbol'>-</span>a4
+
+  .repeat h             <span class='comment'>; h # times</span>
+    pusha
+    get c1<span class='symbol'>=</span>rgb r<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>8</span>,<span class='symbol'>\</span>  <span class='comment'>; c=(c>>>8)</span>
+     g<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>8</span>, b<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>8</span>
+    popa
+    . v8<span class='symbol'>=</span>a3             <span class='comment'>; draw lines...</span>
+    .repeat v8          <span class='comment'>; w # times</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c1 <span class='comment'>; *vga++=c</span>
+    .endr
+    . a2<span class='symbol'>=</span>SCREEN.PITCH
+    . a1<span class='symbol'>-</span><span class='symbol'>(</span>a3<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>)<span class='symbol'>,</span> a1<span class='symbol'>+</span>a2 <span class='comment'>; vga-(w*2)+pitch</span>
+    . r<span class='symbol'>+</span>rn<span class='symbol'>,</span> g<span class='symbol'>+</span>gn<span class='symbol'>,</span> b<span class='symbol'>+</span>bn  <span class='comment'>; r/g/b+deltas</span>
+  .endr                 <span class='comment'>; 8.8 fixed points</span>
+endf
+
+macro draw.fade x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> c1<span class='symbol'>,</span> c2 <span class='symbol'>{</span>
+  . a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h<span class='symbol'>,</span> v5<span class='symbol'>=</span>c1<span class='symbol'>,</span> v6<span class='symbol'>=</span>c2
+  draw.fade
+<span class='symbol'>}</span>
+
+<span class='comment'>; draw with vertical center fade:</span>
+<span class='comment'>; from c1 to c2 then c2 to c1.</span>
+<span class='comment'>; a1-a4=x/y/w/h. v5-v6=c1/c2</span>
+
+function draw.shade
+  alias <span class='symbol'>\</span>
+   x<span class='symbol'>=</span>a1<span class='symbol'>,</span> y<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4<span class='symbol'>,</span><span class='symbol'>\</span>
+   c1<span class='symbol'>=</span>v5<span class='symbol'>,</span> c2<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   tmp<span class='symbol'>=</span>v7
+  . h<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>1</span>           <span class='comment'>; h/2</span>
+  pusha
+  draw.fade <span class='symbol'>\</span>
+   x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span><span class='symbol'>\</span>
+   c1<span class='symbol'>,</span> c2
+  popa
+  . y<span class='symbol'>+</span>h<span class='symbol'>,</span> tmp<span class='symbol'>=</span>c1     <span class='comment'>; move down</span>
+  . c1<span class='symbol'>=</span>c2<span class='symbol'>,</span> c2<span class='symbol'>=</span>tmp   <span class='comment'>; exchange colors</span>
+  draw.fade <span class='symbol'>\</span>
+   x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span><span class='symbol'>\</span>
+   c1<span class='symbol'>,</span> c2
+endf
+
+macro draw.shade x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> c1<span class='symbol'>,</span> c2 <span class='symbol'>{</span>
+  . a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h<span class='symbol'>,</span> v5<span class='symbol'>=</span>c1<span class='symbol'>,</span> v6<span class='symbol'>=</span>c2
+  draw.shade
+<span class='symbol'>}</span>
+
+function draw.black.bar<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h
+ alias <span class='symbol'>\</span>
+   x<span class='symbol'>=</span>a1<span class='symbol'>,</span> y<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4<span class='symbol'>,</span><span class='symbol'>\</span>
+   c1<span class='symbol'>=</span>v5<span class='symbol'>,</span> c2<span class='symbol'>=</span>v6
+  . h<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>1</span>                 <span class='comment'>; h/2</span>
+  pusha
+  draw.fade x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span><span class='symbol'>\</span>
+   GRAY<span class='symbol'>,</span> GRAY25
+  popa
+  pusha
+  . y<span class='symbol'>+</span>h                   <span class='comment'>; move down</span>
+  draw.fade x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span><span class='symbol'>\</span>
+   BLACK<span class='symbol'>,</span> GRAY25
+  popa
+  pusha
+  . h<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>
+  draw.outline <span class='symbol'>\</span>          <span class='comment'>; outline</span>
+   x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> GRAY
+  popa
+  pusha
+  draw.line.h <span class='symbol'>\</span>           <span class='comment'>; highlight</span>
+   x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> GRAY.L
+  popa
+endf</pre></body></html>

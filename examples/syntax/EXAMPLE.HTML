@@ -1,0 +1,486 @@
+<!DOCTYPE html><html><head>
+<meta http-equiv="content-type"
+context="text/html; charset=windows-1252">
+<title>Drawing Functions</title></head>
+<body bgcolor="#FFFFFF"><b>
+
+<style>
+body {
+ font-size: 18px;
+ font-weight: bold;
+ width: 720px;
+ font-family: "Consolas",
+ "Bitstream Vera Sans Mono",
+ "Courier New", "Courier",
+ "Andale Mono WT", "Andale Mono",
+ "Lucida Console", "DejaVu Sans Mono",
+ "Monaco", monospace;
+}
+
+.comment {
+ color: #A0A0A0;
+ font-style: italic;
+}
+
+.symbol { color: #2207FF; }
+.number { color: #5E00F7; }
+.string { color: #FF1777; }
+</style>
+
+<pre style="background:white; color:black;
+border:2px solid white; padding:.2em .2em;">
+<span class='comment'>; $$$$$$$$$$$$$$$$$$ MAGIC-ARM $$$$$$$$$$$$$$$$$$$</span>
+<span class='comment'>; *************** STAR^2 SOFTWARE ****************</span>
+<span class='comment'>; ?????????????????? DRAW.INC ????????????????????</span>
+
+<span class='comment'>; fast portable ARM graphics for RGB16 (5.6.5)</span>
+
+<span class='comment'>; vga.xy x, y  ; &vga[xy(x,y)]</span>
+<span class='comment'>; color.at     ; vga[xy(x,y)]</span>
+
+<span class='comment'>; clear.screen</span>
+
+<span class='comment'>; draw.pixel x, y, c</span>
+<span class='comment'>; draw.line.h x, y, w, c</span>
+<span class='comment'>; draw.line.v x, y, h, c</span>
+
+<span class='comment'>; draw.box x, y, w, h, c</span>
+<span class='comment'>; draw.box.t x, y, w, h, c, a</span>
+<span class='comment'>; draw.outline x, y, w, h, c</span>
+
+<span class='comment'>; draw.scanline x, y, w, p</span>
+<span class='comment'>; draw.scanline.t x, y, w, p</span>
+<span class='comment'>; draw.scanline.v x, y, w, p, c</span>
+
+<span class='comment'>; draw.bitmap x, y, w, h, p</span>
+<span class='comment'>; draw.bitmap.t x, y, w, h, p</span>
+<span class='comment'>; draw.bitmap.a x, y, w, h, p, a</span>
+
+<span class='comment'>; draw.fade x, y, w, h, c1, c2</span>
+<span class='comment'>; draw.shade x, y, w, h, c1, c2</span>
+<span class='comment'>; draw.black.bar x, y, w, h</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;;;;; DRAWING ;;;;;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; address &vga[(y*(screen.w*2))+(x*2)]...</span>
+
+function vga.xy<span class='symbol'>,</span> x<span class='symbol'>,</span> y
+  . a3<span class='symbol'>=</span>SCREEN.PITCH<span class='symbol'>,</span> a4<span class='symbol'>=</span>a2<span class='symbol'>*</span>a3
+  . a4<span class='symbol'>+</span><span class='symbol'>(</span>a1<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>)<span class='symbol'>,</span> a2<span class='symbol'>=</span>@vga<span class='symbol'>,</span> a1<span class='symbol'>=</span>a2<span class='symbol'>+</span>a4
+endf
+
+<span class='comment'>; erase screen with color/a1...</span>
+
+function clear.screen<span class='symbol'>,</span> c
+  alias vga<span class='symbol'>=</span>a3<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>a2<span class='symbol'>,</span> c<span class='symbol'>=</span>a1
+  . vga<span class='symbol'>=</span>@vga<span class='symbol'>,</span> w<span class='symbol'>=</span>SCREEN.N
+  .repeat w
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c
+  .endr
+endf
+
+<span class='comment'>;;;;;;;;;;;;;;;; DRAW PIXEL, LINE ;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; draw pixel: a1-a3=x/y/c...</span>
+
+function draw.pixel<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> c
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>v1
+  . c<span class='symbol'>=</span>a3
+  vga.xy
+  . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>=</span>c
+endf
+
+<span class='comment'>; draw horizontal line: a1-a4=x/y/w/c...</span>
+
+function draw.line.h<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> c
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   c<span class='symbol'>=</span>v1<span class='symbol'>,</span> w<span class='symbol'>=</span>v2
+  . c<span class='symbol'>=</span>a4<span class='symbol'>,</span> w<span class='symbol'>=</span>a3
+  vga.xy
+  .repeat w
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c
+  .endr
+endf
+
+<span class='comment'>; draw vertical line: a1-a4=x/y/h/c...</span>
+
+function draw.line.v<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> h<span class='symbol'>,</span> c
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   h<span class='symbol'>=</span>v1<span class='symbol'>,</span> c<span class='symbol'>=</span>v2<span class='symbol'>,</span> pitch<span class='symbol'>=</span>v3
+  . c<span class='symbol'>=</span>a4<span class='symbol'>,</span> h<span class='symbol'>=</span>a3
+  vga.xy
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH
+  .repeat h
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>=</span>c<span class='symbol'>,</span> vga<span class='symbol'>+</span>pitch
+  .endr
+endf
+
+<span class='comment'>;;;;;;;;;;;;;;; DRAW BOX, OUTLINE ;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; draw solid rectangle: a1-v1=x/y/w/h/c...</span>
+
+function draw.box
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   sw<span class='symbol'>=</span>v2<span class='symbol'>,</span> w<span class='symbol'>=</span>v3<span class='symbol'>,</span> h<span class='symbol'>=</span>v4<span class='symbol'>,</span><span class='symbol'>\</span>
+   pitch<span class='symbol'>=</span>a2<span class='symbol'>,</span> wb<span class='symbol'>=</span>a3
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> sw<span class='symbol'>=</span>w<span class='symbol'>,</span> h<span class='symbol'>=</span>a4    <span class='comment'>; save w/h</span>
+  vga.xy
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH  <span class='comment'>; screen+row</span>
+  . wb<span class='symbol'>=</span>w<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>             <span class='comment'>; w in bytes</span>
+  .repeat h             <span class='comment'>; h # times</span>
+    . w<span class='symbol'>=</span>sw              <span class='comment'>; reset saved</span>
+    .repeat w           <span class='comment'>; w # times</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c  <span class='comment'>; copy color</span>
+    .endr
+    . vga<span class='symbol'>+</span>pitch<span class='symbol'>,</span> vga<span class='symbol'>-</span>wb <span class='comment'>; advance</span>
+  .endr
+endf
+
+macro draw.box x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> c <span class='symbol'>{</span>
+  if <span class='symbol'>~</span>x eq
+    . v1<span class='symbol'>=</span>c<span class='symbol'>,</span> a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h
+    draw.box
+  end if
+<span class='symbol'>}</span>
+
+<span class='comment'>; draw rectangle outline...</span>
+
+function draw.outline
+  alias c<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   x<span class='symbol'>=</span>v2<span class='symbol'>,</span> y<span class='symbol'>=</span>v3<span class='symbol'>,</span> w<span class='symbol'>=</span>v4<span class='symbol'>,</span> h<span class='symbol'>=</span>v5
+  . x<span class='symbol'>=</span>a1<span class='symbol'>,</span> y<span class='symbol'>=</span>a2<span class='symbol'>,</span> w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4
+  vga.xy
+  draw.line.h x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> c   <span class='comment'>; top: x, y, w</span>
+  draw.line.v x<span class='symbol'>,</span> y<span class='symbol'>,</span> h<span class='symbol'>,</span> c   <span class='comment'>; left: x, y, h</span>
+  . a1<span class='symbol'>=</span>x<span class='symbol'>+</span>w<span class='symbol'>,</span> a1<span class='symbol'>-</span><span class='symbol'>-</span>           <span class='comment'>; right: x+w-1</span>
+  draw.line.v <span class='symbol'>\</span>
+   a1<span class='symbol'>,</span> y<span class='symbol'>+</span><span class='number'>1</span>, h<span class='symbol'>-</span><span class='number'>1</span>, c
+  . a2<span class='symbol'>=</span>y<span class='symbol'>+</span>h<span class='symbol'>,</span> a2<span class='symbol'>-</span><span class='symbol'>-</span>           <span class='comment'>; bottom: y+h-1</span>
+  draw.line.h x<span class='symbol'>,</span> a2<span class='symbol'>,</span> w<span class='symbol'>,</span> c
+endf
+
+macro draw.outline x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> c <span class='symbol'>{</span>
+  if <span class='symbol'>~</span>x eq
+    . a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h<span class='symbol'>,</span> v1<span class='symbol'>=</span>c
+  end if
+  draw.outline
+<span class='symbol'>}</span>
+
+<span class='comment'>; draw rectangle with transparency...</span>
+<span class='comment'>; a1-a4=x/y/w/h. v5=color, v6=alpha</span>
+
+function draw.box.t
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span> c<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>v3<span class='symbol'>,</span> h<span class='symbol'>=</span>v4<span class='symbol'>,</span> sw<span class='symbol'>=</span>v2<span class='symbol'>,</span><span class='symbol'>\</span>
+   cl<span class='symbol'>=</span>v5<span class='symbol'>,</span> a<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   pitch<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   wb<span class='symbol'>=</span>a3<span class='symbol'>,</span> sc<span class='symbol'>=</span>v7
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> sw<span class='symbol'>=</span>w<span class='symbol'>,</span> h<span class='symbol'>=</span>a4    <span class='comment'>; save w/h</span>
+  vga.xy
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH  <span class='comment'>; screen+row</span>
+  . wb<span class='symbol'>=</span>w<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>             <span class='comment'>; w in bytes</span>
+  .repeat h             <span class='comment'>; h # times</span>
+    . w<span class='symbol'>=</span>sw              <span class='comment'>; reset saved</span>
+    .repeat w           <span class='comment'>; w # times</span>
+     . <span class='symbol'>(</span>u16<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>vga     <span class='comment'>; screen color</span>
+      pusha
+      mix c<span class='symbol'>,</span> cl<span class='symbol'>,</span> a      <span class='comment'>; combine</span>
+      . c<span class='symbol'>=</span>a1
+      popa
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c  <span class='comment'>; copy</span>
+    .endr
+    . vga<span class='symbol'>+</span>pitch<span class='symbol'>,</span> vga<span class='symbol'>-</span>wb <span class='comment'>; advance</span>
+  .endr
+endf
+
+macro draw.box.t x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> c<span class='symbol'>,</span> a <span class='symbol'>{</span>
+  . a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h<span class='symbol'>,</span> v5<span class='symbol'>=</span>c<span class='symbol'>,</span> v6<span class='symbol'>=</span>a
+  draw.box.t
+<span class='symbol'>}</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;; DRAW SCANLINE ;;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; draw 16BPP scanline. a1-a4=x/y/w/pixels...</span>
+
+function draw.scanline<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> p
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>          <span class='comment'>; aliases</span>
+   p<span class='symbol'>=</span>v1<span class='symbol'>,</span> w<span class='symbol'>=</span>v2
+  . p<span class='symbol'>=</span>a4<span class='symbol'>,</span> w<span class='symbol'>=</span>a3            <span class='comment'>; save w</span>
+  vga.xy                  <span class='comment'>; &vga(x,y)</span>
+  .repeat w               <span class='comment'>; w # times</span>
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span><span class='symbol'>*</span>p<span class='symbol'>+</span><span class='symbol'>+</span>   <span class='comment'>; copy pixel</span>
+  .endr
+endf
+
+<span class='comment'>; draw with transparent color...</span>
+
+function draw.scanline.t<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> p
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>     <span class='comment'>; aliases</span>
+   c<span class='symbol'>=</span>a2<span class='symbol'>,</span> key<span class='symbol'>=</span>v2<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>v3<span class='symbol'>,</span> p<span class='symbol'>=</span>v1
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> p<span class='symbol'>=</span>a4       <span class='comment'>; save w/p</span>
+  vga.xy             <span class='comment'>; &vga(x,y)</span>
+   . <span class='symbol'>(</span>u16<span class='symbol'>)</span> key<span class='symbol'>=</span><span class='symbol'>*</span>p    <span class='comment'>; color at 0x0</span>
+  .repeat w          <span class='comment'>; w # times</span>
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>p<span class='symbol'>+</span><span class='symbol'>+</span>   <span class='comment'>; get source pixel</span>
+    .if c<span class='symbol'><</span><span class='symbol'>></span>key       <span class='comment'>; opaque?</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>=</span>c <span class='comment'>; copy to screen</span>
+    .end
+    . vga<span class='symbol'>+</span><span class='number'>2</span>          <span class='comment'>; next</span>
+  .endr
+endf
+
+<span class='comment'>; draw 16BPP variant scanline.</span>
+<span class='comment'>; a1-v1=x/y/w/c/pixels...</span>
+
+function draw.scanline.v
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>       <span class='comment'>; aliases</span>
+   p<span class='symbol'>=</span>v1<span class='symbol'>,</span> c<span class='symbol'>=</span>v2<span class='symbol'>,</span> s<span class='symbol'>=</span>v3<span class='symbol'>,</span><span class='symbol'>\</span>
+   cl<span class='symbol'>=</span>v4<span class='symbol'>,</span> x<span class='symbol'>=</span>v5<span class='symbol'>,</span> w<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   n<span class='symbol'>=</span>v7
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> cl<span class='symbol'>=</span>a4        <span class='comment'>; save w, color</span>
+  vga.xy               <span class='comment'>; &vga(x,y)</span>
+  .repeat w            <span class='comment'>; w # times</span>
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>p<span class='symbol'>+</span><span class='symbol'>+</span>     <span class='comment'>; get source pixel</span>
+    .if c<span class='symbol'>=</span><span class='number'>0</span>            <span class='comment'>; black, 100% invisible</span>
+      go .next
+    .end
+    . x<span class='symbol'>=</span>WHITE
+    .if c<span class='symbol'>=</span>x            <span class='comment'>; white, 100% visible</span>
+      . c<span class='symbol'>=</span>cl
+      go .draw
+    .end
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> s<span class='symbol'>=</span><span class='symbol'>*</span>vga     <span class='comment'>; else mixed</span>
+    . n<span class='symbol'>=</span>c<span class='symbol'>&</span><span class='number'>11111b</span>, n<span class='symbol'><</span><span class='symbol'><</span><span class='number'>3</span> <span class='comment'>; alpha intensity</span>
+    .if n<span class='symbol'>></span><span class='symbol'>=</span><span class='number'>252</span>         <span class='comment'>; invisible</span>
+      go .next         <span class='comment'>; skip</span>
+    .end
+    .if n<span class='symbol'><</span><span class='symbol'>=</span><span class='number'>4</span>           <span class='comment'>; pure</span>
+      . c<span class='symbol'>=</span>cl
+      go .draw
+    .end
+    pusha
+    mix s<span class='symbol'>,</span> cl<span class='symbol'>,</span> n       <span class='comment'>; combine</span>
+    . c<span class='symbol'>=</span>r0             <span class='comment'>; screen+color</span>
+    popa
+    .draw<span class='symbol'>:</span>
+    . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>=</span>c
+    .next<span class='symbol'>:</span>
+    . vga<span class='symbol'>+</span><span class='number'>2</span>            <span class='comment'>; next</span>
+  .endr
+endf
+
+macro draw.scanline.v x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> c<span class='symbol'>,</span> p <span class='symbol'>{</span>
+  . a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>c<span class='symbol'>,</span> v1<span class='symbol'>=</span>p
+  draw.scanline.v
+<span class='symbol'>}</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;;; DRAW BITMAP ;;;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; draw 15/16BPP bitmap. a1-a4=x/y/w/h.</span>
+<span class='comment'>; v1=pixels...</span>
+
+function draw.bitmap
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>         <span class='comment'>; aliases</span>
+   image<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>v2<span class='symbol'>,</span> h<span class='symbol'>=</span>v3<span class='symbol'>,</span> sw<span class='symbol'>=</span>v4<span class='symbol'>,</span><span class='symbol'>\</span>   <span class='comment'>; sizes, saved w</span>
+   pitch<span class='symbol'>=</span>v5<span class='symbol'>,</span> iwb<span class='symbol'>=</span>v6
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4<span class='symbol'>,</span> sw<span class='symbol'>=</span>w     <span class='comment'>; save size</span>
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH   <span class='comment'>; screen+image</span>
+  . iwb<span class='symbol'>=</span>w<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>             <span class='comment'>; w in bytes</span>
+  vga.xy                 <span class='comment'>; &vga(x,y)</span>
+  .repeat h              <span class='comment'>; h # times</span>
+    . w<span class='symbol'>=</span>sw               <span class='comment'>; get saved w</span>
+    .repeat w            <span class='comment'>; w # times</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>\</span>
+       <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span><span class='symbol'>*</span>image<span class='symbol'>+</span><span class='symbol'>+</span>   <span class='comment'>; copy pixel</span>
+    .endr
+    . vga<span class='symbol'>+</span>pitch<span class='symbol'>,</span> vga<span class='symbol'>-</span>iwb <span class='comment'>; advance</span>
+  .endr
+endf
+
+macro draw.bitmap p<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h <span class='symbol'>{</span>
+  if <span class='symbol'>~</span>p eq
+    . v1<span class='symbol'>=</span>p<span class='symbol'>,</span> a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h
+  end if
+  draw.bitmap
+<span class='symbol'>}</span>
+
+<span class='comment'>; draw bitmap with transparency</span>
+<span class='comment'>; by upper left pixel color (0x0).</span>
+<span class='comment'>; a1-a4=x/y/w/h. v1=pixels...</span>
+
+function draw.bitmap.t
+  alias <span class='symbol'>\</span>                 <span class='comment'>; aliases</span>
+   vga<span class='symbol'>=</span>a1<span class='symbol'>,</span> image<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>v2<span class='symbol'>,</span> h<span class='symbol'>=</span>v3<span class='symbol'>,</span> sw<span class='symbol'>=</span>v4<span class='symbol'>,</span><span class='symbol'>\</span>    <span class='comment'>; sizes, saved w</span>
+   pitch<span class='symbol'>=</span>v5<span class='symbol'>,</span> iwb<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   key<span class='symbol'>=</span>v7<span class='symbol'>,</span> c<span class='symbol'>=</span>a2
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4<span class='symbol'>,</span> sw<span class='symbol'>=</span>w      <span class='comment'>; save size</span>
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH    <span class='comment'>; screen+image</span>
+  . iwb<span class='symbol'>=</span>w<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>              <span class='comment'>; w in bytes</span>
+  . <span class='symbol'>(</span>u16<span class='symbol'>)</span> key<span class='symbol'>=</span><span class='symbol'>*</span>image      <span class='comment'>; transparent color</span>
+  vga.xy                  <span class='comment'>; &vga(x,y)</span>
+  .repeat h               <span class='comment'>; h # times</span>
+    . w<span class='symbol'>=</span>sw
+    .repeat w             <span class='comment'>; w # times</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>image<span class='symbol'>+</span><span class='symbol'>+</span>
+      .if c<span class='symbol'><</span><span class='symbol'>></span>key          <span class='comment'>; opaque?</span>
+        . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c  <span class='comment'>; copy pixel</span>
+      .else
+        . vga<span class='symbol'>+</span><span class='number'>2</span>           <span class='comment'>; next</span>
+      .end
+    .endr
+    . vga<span class='symbol'>+</span>pitch<span class='symbol'>,</span> vga<span class='symbol'>-</span>iwb  <span class='comment'>; advance</span>
+  .endr
+endf
+
+macro draw.bitmap.t p<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h <span class='symbol'>{</span>
+  if <span class='symbol'>~</span>p eq
+   . v1<span class='symbol'>=</span>p<span class='symbol'>,</span> a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h
+  end if
+  draw.bitmap.t
+<span class='symbol'>}</span>
+
+<span class='comment'>; draw bitmap with alpha in v8</span>
+
+function draw.bitmap.a
+  alias <span class='symbol'>\</span>                 <span class='comment'>; aliases</span>
+   vga<span class='symbol'>=</span>a1<span class='symbol'>,</span> image<span class='symbol'>=</span>v1<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>v2<span class='symbol'>,</span> h<span class='symbol'>=</span>v3<span class='symbol'>,</span> sw<span class='symbol'>=</span>v4<span class='symbol'>,</span><span class='symbol'>\</span>    <span class='comment'>; sizes, saved w</span>
+   pitch<span class='symbol'>=</span>v5<span class='symbol'>,</span> iwb<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   key<span class='symbol'>=</span>v7<span class='symbol'>,</span> a<span class='symbol'>=</span>v8<span class='symbol'>,</span> c<span class='symbol'>=</span>r12
+  . w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4<span class='symbol'>,</span> sw<span class='symbol'>=</span>w      <span class='comment'>; save size</span>
+  . pitch<span class='symbol'>=</span>SCREEN.PITCH    <span class='comment'>; screen+image</span>
+  . iwb<span class='symbol'>=</span>w<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>              <span class='comment'>; w in bytes</span>
+  . <span class='symbol'>(</span>u16<span class='symbol'>)</span> key<span class='symbol'>=</span><span class='symbol'>*</span>image      <span class='comment'>; transparent color</span>
+  vga.xy                  <span class='comment'>; &vga(x,y)</span>
+  .repeat h               <span class='comment'>; h # times</span>
+    . w<span class='symbol'>=</span>sw
+    .repeat w             <span class='comment'>; w # times</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> c<span class='symbol'>=</span><span class='symbol'>*</span>image<span class='symbol'>+</span><span class='symbol'>+</span>
+      .if c<span class='symbol'><</span><span class='symbol'>></span>key          <span class='comment'>; opaque?</span>
+        pusha
+        . <span class='symbol'>(</span>u16<span class='symbol'>)</span> a2<span class='symbol'>=</span><span class='symbol'>*</span>vga
+        . a1<span class='symbol'>=</span>c<span class='symbol'>,</span> a3<span class='symbol'>=</span>a
+        mix
+        . c<span class='symbol'>=</span>a1
+        popa
+        . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c  <span class='comment'>; copy pixel</span>
+      .else
+        . vga<span class='symbol'>+</span><span class='number'>2</span>           <span class='comment'>; next</span>
+      .end
+    .endr
+    . vga<span class='symbol'>+</span>pitch<span class='symbol'>,</span> vga<span class='symbol'>-</span>iwb  <span class='comment'>; advance</span>
+  .endr
+endf
+
+macro draw.bitmap.a p<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> a <span class='symbol'>{</span>
+  if <span class='symbol'>~</span>p eq
+   . v1<span class='symbol'>=</span>p<span class='symbol'>,</span> a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h<span class='symbol'>,</span> v8<span class='symbol'>=</span>a
+  end if
+  draw.bitmap.a
+<span class='symbol'>}</span>
+
+<span class='comment'>;;;;;;;;;;;;;;;;; DRAW GRADIENTS ;;;;;;;;;;;;;;;;;</span>
+
+<span class='comment'>; draw gradual vertical fade. parameters:</span>
+<span class='comment'>; a1-a4=x/y/w/h. v5-v6=c1/c2</span>
+
+function draw.fade
+  alias vga<span class='symbol'>=</span>a1<span class='symbol'>,</span><span class='symbol'>\</span>
+   r<span class='symbol'>=</span>v1<span class='symbol'>,</span> g<span class='symbol'>=</span>v2<span class='symbol'>,</span> b<span class='symbol'>=</span>v3<span class='symbol'>,</span><span class='symbol'>\</span>
+   rn<span class='symbol'>=</span>v4<span class='symbol'>,</span> gn<span class='symbol'>=</span>v5<span class='symbol'>,</span> bn<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   c1<span class='symbol'>=</span>v7<span class='symbol'>,</span> c2<span class='symbol'>=</span>v8<span class='symbol'>,</span> h<span class='symbol'>=</span>r12
+
+  pusha                 <span class='comment'>; save a1-a4=x/y/w/h</span>
+  . c1<span class='symbol'>=</span>v5<span class='symbol'>,</span> c2<span class='symbol'>=</span>v6<span class='symbol'>,</span> h<span class='symbol'>=</span>a4  <span class='comment'>; save colors+h</span>
+  delta8 c1<span class='symbol'>,</span> c2<span class='symbol'>,</span> <span class='number'>11</span>, h  <span class='comment'>; get deltas...</span>
+  . rn<span class='symbol'>=</span>a1
+  delta8 c1<span class='symbol'>,</span> c2<span class='symbol'>,</span> <span class='number'>5</span>, h
+  . gn<span class='symbol'>=</span>a1
+  delta8 c1<span class='symbol'>,</span> c2<span class='symbol'>,</span> <span class='number'>0</span>, h
+  . bn<span class='symbol'>=</span>a1<span class='symbol'>,</span> a1<span class='symbol'>=</span>c1        <span class='comment'>; extract and scale</span>
+  get.rgb               <span class='comment'>; r/g/b components</span>
+  . r<span class='symbol'>=</span>a1<span class='symbol'><</span><span class='symbol'><</span><span class='number'>8</span>
+  . g<span class='symbol'>=</span>a2<span class='symbol'><</span><span class='symbol'><</span><span class='number'>8</span>
+  . b<span class='symbol'>=</span>a3<span class='symbol'><</span><span class='symbol'><</span><span class='number'>8</span>
+  popa                  <span class='comment'>; restore x/y/w/h</span>
+  push a3<span class='symbol'>-</span>a4            <span class='comment'>; save w/h</span>
+  vga.xy                <span class='comment'>; x/y no longer needed</span>
+  pop a3<span class='symbol'>-</span>a4
+
+  .repeat h             <span class='comment'>; h # times</span>
+    pusha
+    get c1<span class='symbol'>=</span>rgb r<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>8</span>,<span class='symbol'>\</span>  <span class='comment'>; c=(c>>>8)</span>
+     g<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>8</span>, b<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>8</span>
+    popa
+    . v8<span class='symbol'>=</span>a3             <span class='comment'>; draw lines...</span>
+    .repeat v8          <span class='comment'>; w # times</span>
+      . <span class='symbol'>(</span>u16<span class='symbol'>)</span> <span class='symbol'>*</span>vga<span class='symbol'>+</span><span class='symbol'>+</span><span class='symbol'>=</span>c1 <span class='comment'>; *vga++=c</span>
+    .endr
+    . a2<span class='symbol'>=</span>SCREEN.PITCH
+    . a1<span class='symbol'>-</span><span class='symbol'>(</span>a3<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>)<span class='symbol'>,</span> a1<span class='symbol'>+</span>a2 <span class='comment'>; vga-(w*2)+pitch</span>
+    . r<span class='symbol'>+</span>rn<span class='symbol'>,</span> g<span class='symbol'>+</span>gn<span class='symbol'>,</span> b<span class='symbol'>+</span>bn  <span class='comment'>; r/g/b+deltas</span>
+  .endr                 <span class='comment'>; 8.8 fixed points</span>
+endf
+
+macro draw.fade x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> c1<span class='symbol'>,</span> c2 <span class='symbol'>{</span>
+  . a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h<span class='symbol'>,</span> v5<span class='symbol'>=</span>c1<span class='symbol'>,</span> v6<span class='symbol'>=</span>c2
+  draw.fade
+<span class='symbol'>}</span>
+
+<span class='comment'>; draw with vertical center fade:</span>
+<span class='comment'>; from c1 to c2 then c2 to c1.</span>
+<span class='comment'>; a1-a4=x/y/w/h. v5-v6=c1/c2</span>
+
+function draw.shade
+  alias <span class='symbol'>\</span>
+   x<span class='symbol'>=</span>a1<span class='symbol'>,</span> y<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4<span class='symbol'>,</span><span class='symbol'>\</span>
+   c1<span class='symbol'>=</span>v5<span class='symbol'>,</span> c2<span class='symbol'>=</span>v6<span class='symbol'>,</span><span class='symbol'>\</span>
+   tmp<span class='symbol'>=</span>v7
+  . h<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>1</span>           <span class='comment'>; h/2</span>
+  pusha
+  draw.fade <span class='symbol'>\</span>
+   x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span><span class='symbol'>\</span>
+   c1<span class='symbol'>,</span> c2
+  popa
+  . y<span class='symbol'>+</span>h<span class='symbol'>,</span> tmp<span class='symbol'>=</span>c1     <span class='comment'>; move down</span>
+  . c1<span class='symbol'>=</span>c2<span class='symbol'>,</span> c2<span class='symbol'>=</span>tmp   <span class='comment'>; exchange colors</span>
+  draw.fade <span class='symbol'>\</span>
+   x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span><span class='symbol'>\</span>
+   c1<span class='symbol'>,</span> c2
+endf
+
+macro draw.shade x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> c1<span class='symbol'>,</span> c2 <span class='symbol'>{</span>
+  . a1<span class='symbol'>=</span>x<span class='symbol'>,</span> a2<span class='symbol'>=</span>y<span class='symbol'>,</span> a3<span class='symbol'>=</span>w<span class='symbol'>,</span> a4<span class='symbol'>=</span>h<span class='symbol'>,</span> v5<span class='symbol'>=</span>c1<span class='symbol'>,</span> v6<span class='symbol'>=</span>c2
+  draw.shade
+<span class='symbol'>}</span>
+
+function draw.black.bar<span class='symbol'>,</span> x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h
+ alias <span class='symbol'>\</span>
+   x<span class='symbol'>=</span>a1<span class='symbol'>,</span> y<span class='symbol'>=</span>a2<span class='symbol'>,</span><span class='symbol'>\</span>
+   w<span class='symbol'>=</span>a3<span class='symbol'>,</span> h<span class='symbol'>=</span>a4<span class='symbol'>,</span><span class='symbol'>\</span>
+   c1<span class='symbol'>=</span>v5<span class='symbol'>,</span> c2<span class='symbol'>=</span>v6
+  . h<span class='symbol'>></span><span class='symbol'>></span><span class='symbol'>></span><span class='number'>1</span>                 <span class='comment'>; h/2</span>
+  pusha
+  draw.fade x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span><span class='symbol'>\</span>
+   GRAY<span class='symbol'>,</span> GRAY25
+  popa
+  pusha
+  . y<span class='symbol'>+</span>h                   <span class='comment'>; move down</span>
+  draw.fade x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span><span class='symbol'>\</span>
+   BLACK<span class='symbol'>,</span> GRAY25
+  popa
+  pusha
+  . h<span class='symbol'><</span><span class='symbol'><</span><span class='number'>1</span>
+  draw.outline <span class='symbol'>\</span>          <span class='comment'>; outline</span>
+   x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> h<span class='symbol'>,</span> GRAY
+  popa
+  pusha
+  draw.line.h <span class='symbol'>\</span>           <span class='comment'>; highlight</span>
+   x<span class='symbol'>,</span> y<span class='symbol'>,</span> w<span class='symbol'>,</span> GRAY.L
+  popa
+endf</pre></body></html>

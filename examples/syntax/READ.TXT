@@ -1,0 +1,5 @@
+Syntax Highlighter: Convert Code 2 HTML
+
+A minimal syntax highlighter written in FASM's preprocessor language. Supports comments, numbers, 'strings' and operators. Easily customizable and upgradable.
+
+How To: In NAME.ASM, specify SOURCE.EXT file/s then Run/F9 to generate *.HTML.
