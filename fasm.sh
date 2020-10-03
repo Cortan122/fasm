@@ -14,5 +14,6 @@ rm "$arg2"
 
 cd ~/Downloads/fasmw17325/INCLUDE/
 ../FASM.EXE "$in" "$out"
+cd - >/dev/null
 
-[ "$2" == "--run" ] && "$realout"
+[ "$2" == "--run" ] && "$realout" "${@:3}"
