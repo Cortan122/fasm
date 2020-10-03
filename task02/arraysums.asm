@@ -11,25 +11,6 @@ include 'win32a.inc'
 STD_OUTPUT_HANDLE = -11
 
 section '.code' code readable executable
-  sttysize:
-    push STD_OUTPUT_HANDLE
-    call [GetStdHandle]
-    mov [stdoutHandle], eax
-
-    push 22
-    call [malloc]
-    mov [consoleStructPointer], eax
-    add esp, 4
-
-    push eax
-    push dword[stdoutHandle]
-    call [GetConsoleScreenBufferInfo]
-
-    mov eax, [consoleStructPointer]
-    mov ax, [eax]
-    and eax, 0xffff
-    ret
-
   isGetchNeeded:
     call [GetConsoleWindow]
     mov [consoleWindowHandle], eax
@@ -57,6 +38,13 @@ section '.code' code readable executable
     call [getch]
 
     gracefulExit_exit:
+    push dword[arrA]
+    call [free]
+    add esp, 4
+    push dword[arrB]
+    call [free]
+    add esp, 4
+
     push 0
     call [exit]
     add esp, 4
@@ -328,7 +316,7 @@ section '.idata' import code readable
   import msvcrt, \
     printf, 'printf', fprintf, 'fprintf', scprintf, '_scprintf', snprintf, 'snprintf', \
     scanf, 'scanf', fscanf, 'fscanf', fopen, 'fopen', perror, 'perror', \
-    malloc, 'malloc', realloc, 'realloc', \ ; нам free ненужен))
+    malloc, 'malloc', realloc, 'realloc', free, 'free', \
     memcpy, 'memcpy', strcmp, 'strcmp', strlen, 'strlen', \
     exit, '_exit', getch, '_getch', getmainargs, '__getmainargs', fdopen, '_fdopen'
 

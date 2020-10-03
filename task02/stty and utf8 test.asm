@@ -10,17 +10,11 @@ section '.code' code readable executable
     call [GetStdHandle]
     mov [stdoutHandle], eax
 
-    push 22
-    call [malloc]
-    mov [consoleStructPointer], eax
-    add esp, 4
-
-    push eax
+    push consoleStruct
     push dword[stdoutHandle]
     call [GetConsoleScreenBufferInfo]
 
-    mov eax, [consoleStructPointer]
-    mov ax, [eax]
+    mov ax, [consoleStruct]
     and eax, 0xffff
     ret
 
@@ -86,17 +80,17 @@ section '.data' data readable writable
   helloStr: db 'привет! у тебя консолька в %d столбцов и argv[1]="%s"',10,0
   exitStr: db 'ты открыли эту программу не из терминала((',10,'поэтому для выхода из неё тебе надо нажать Enter',10,0
   stdoutHandle: dd 0
-  consoleStructPointer: dd 0
   consoleWindowHandle: dd 0
   consoleWindowProcessId: dd 0
   argv: dd 0
   argc: dd 0
   env: dd 0
+  consoleStruct: rb 22
 
 section '.idata' import code readable
   library msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll', user32, 'user32.dll'
 
-  import msvcrt, printf, 'printf', exit, '_exit', malloc, 'malloc', getch, '_getch', getmainargs, '__getmainargs' ; нам free ненужен))
+  import msvcrt, printf, 'printf', exit, '_exit', getch, '_getch', getmainargs, '__getmainargs' ; нам free ненужен))
 
   import kernel32, \
     GetStdHandle, 'GetStdHandle', \
