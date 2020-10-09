@@ -4,13 +4,22 @@
 ; Дата: 20.09.2020
 ; Вариант: 3 (суммы соседних элементов)
 
+; Разработать программу, которая вводит одномерный массив A[N],
+; формирует из элементов массива A новый массив B по правилам,
+; указанным в таблице, и выводит его. Память под массивы может
+; выделяться как статически, так и динамически по выбору разработчика.
+; Разбить решение задачи на функции следующим образом:
+;   1)Ввод и вывод массивов оформить как подпрограммы.
+;   2)Выполнение задания по варианту оформить как процедуру
+;   3)Организовать вывод как исходного, так и сформированного массивов
+; Массив B из сумм соседних элементов A ({A[0] + A[1], A[1] + A[2], ...}).
+
 format PE console
 entry start
 include 'win32a.inc'
 
-STD_OUTPUT_HANDLE = -11
-
 section '.code' code readable executable
+  ; эта функция проверяет запущенны ли мы из cmd.exe и можно ли нам закрытся сразу
   isGetchNeeded:
     call [GetConsoleWindow]
     mov [consoleWindowHandle], eax
@@ -28,10 +37,12 @@ section '.code' code readable executable
     test eax, eax
     ret
 
+  ; это функция красиво выходит
   gracefulExit:
     call isGetchNeeded
     jz gracefulExit_exit
 
+    ; если мы выедим сейчас то пользователь ничего неуспеет увидить
     push exitStr
     call [printf]
     add esp, 4
@@ -50,6 +61,7 @@ section '.code' code readable executable
     add esp, 4
     ret
 
+  ; эта функция меняет кодировку консоли на UTF8 и читает argv
   dramaticEntrance:
     push 65001
     call [SetConsoleOutputCP]
@@ -69,6 +81,10 @@ section '.code' code readable executable
     mov [stderr], eax
     ret
 
+  ; эта функция добавляет элемент в конец динамического массива А
+  ; этот элемент передаётся как аргумент, и потом убирается со стака
+  ; тоесть в си сигнатура этой функции будет такой
+  ; __stdcall void Array$push(int e);
   Array$push:
     mov eax, [esp+4]
     push esi
@@ -79,6 +95,8 @@ section '.code' code readable executable
     test esi, esi
     jnz Array$push_hasPointer
 
+    ; у нас массив А пустой (тоесть NULL)
+    ; нам надо сначало его создать
     push 2*4
     call [malloc]
     add esp, 4
@@ -94,11 +112,14 @@ section '.code' code readable executable
     shl eax, 1
     mov [arrAcap], eax
 
+    ; наш массив заполнил всё доступное место
+    ; надо удвоить его размер
     push eax
     push esi
     call [realloc]
     add esp, 8
     mov esi, eax
+    mov [arrA], esi
 
     Array$push_hasSpace:
     mov eax, [arrAsize]
@@ -109,8 +130,10 @@ section '.code' code readable executable
 
     pop ebx
     pop esi
-    ret 4
+    ret 4 ; тут мы не возвращяем 4, мы убераем дополнительные 4 байта со стака
 
+  ; эта функция выводит заданный массив заданного размера
+  ; __stdcall void Array$print(int* arr, uint size);
   Array$print:
     mov eax, [esp+4]
     push esi
@@ -137,6 +160,7 @@ section '.code' code readable executable
     cmp esi, ebx
     jge Array$print_loopEnd
 
+    ; запитая там нужна только если это не последний елемент
     push jsonCommaStr
     call [printf]
     add esp, 4
@@ -152,6 +176,7 @@ section '.code' code readable executable
     pop esi
     ret 8
 
+  ; эта функция считывает файл в массив А (и возвращает указатель на массив A)
   readFile:
     push esi ; FILE*
 
@@ -163,6 +188,8 @@ section '.code' code readable executable
     test eax, eax
     jnz readFile_loopStart
 
+    ; у нас неполучилось открыть файл
+    ; надо напичатать ошибку
     push dword[inputFilename]
     call [perror]
     add esp, 4
@@ -187,10 +214,17 @@ section '.code' code readable executable
 
     jmp readFile_loop
     readFile_end:
+    ; закрываем файл
+    ; в этой програме это не особо нужно, но в винде открытые файлы никто неможет удалить
+    push esi
+    call [fclose]
+    add esp, 4
+
     mov eax, [arrA]
     pop esi
     ret
 
+  ; эта функция создаёт массив B
   makeSecondArray:
     push esi
     push ebx
@@ -219,6 +253,9 @@ section '.code' code readable executable
 
     jmp makeSecondArray_ret
     makeSecondArray_fail:
+    ; у нас когда длинна масива A = 0, длина B получается -1, а так нельзя
+    ; тут мы просто возвращяем пустой масив
+    ; чтобы ничего не сломалось
     mov eax, [arrA]
     mov [arrB], eax
     mov dword[arrAsize], 4
@@ -238,6 +275,7 @@ section '.code' code readable executable
     cmp dword[argc], 1
     jne start_readFile
 
+    ; если у нас нет argv, то имя файла надо считать через scanf
     push noargvStr
     call [printf]
     add esp, 4
@@ -292,6 +330,8 @@ section '.data' data readable writable
   jsonCommaStr: db ', ',0
   jsonEndStr: db ']',10,0
   exitStr: db 'ты открыли эту программу не из терминала((',10,'поэтому для выхода из неё тебе надо нажать Enter',10,0
+
+  align 4
   stdoutHandle: dd 0
   consoleStructPointer: dd 0
   consoleWindowHandle: dd 0
@@ -315,7 +355,7 @@ section '.idata' import code readable
 
   import msvcrt, \
     printf, 'printf', fprintf, 'fprintf', scprintf, '_scprintf', snprintf, 'snprintf', \
-    scanf, 'scanf', fscanf, 'fscanf', fopen, 'fopen', perror, 'perror', \
+    scanf, 'scanf', fscanf, 'fscanf', fopen, 'fopen', fclose, 'fclose', perror, 'perror', \
     malloc, 'malloc', realloc, 'realloc', free, 'free', \
     memcpy, 'memcpy', strcmp, 'strcmp', strlen, 'strlen', \
     exit, '_exit', getch, '_getch', getmainargs, '__getmainargs', fdopen, '_fdopen'
